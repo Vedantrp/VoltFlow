@@ -110,6 +110,8 @@ function formatFirebaseError(err: any): string {
     case 'auth/api-key-not-valid':
     case 'auth/invalid-api-key':
       return 'Invalid Firebase API Key in configuration (.env file).';
+    case 'auth/unauthorized-domain':
+      return `This domain (${typeof window !== 'undefined' ? window.location.hostname : 'deployed domain'}) is not authorized in Firebase. Please add '${typeof window !== 'undefined' ? window.location.hostname : 'your-domain.vercel.app'}' in Firebase Console -> Authentication -> Settings -> Authorized domains.`;
     case 'auth/operation-not-allowed':
       return 'Email/Password or Google sign-in provider is disabled in your Firebase console.';
     case 'auth/network-request-failed':
