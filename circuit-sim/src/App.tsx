@@ -148,8 +148,8 @@ export default function App() {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#privacy') return 'privacy';
     if (hash === '#terms') return 'terms';
-    if (hash === '#home') return 'home';
-    return 'simulator';
+    if (hash === '#simulator') return 'simulator';
+    return 'home';
   };
 
   const [currentView, setCurrentView] = useState<'home' | 'simulator' | 'privacy' | 'terms'>(getInitialView);
@@ -159,8 +159,8 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#privacy') setCurrentView('privacy');
       else if (hash === '#terms') setCurrentView('terms');
-      else if (hash === '#home') setCurrentView('home');
-      else setCurrentView('simulator');
+      else if (hash === '#simulator') setCurrentView('simulator');
+      else setCurrentView('home');
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
