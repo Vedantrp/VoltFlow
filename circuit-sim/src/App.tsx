@@ -354,6 +354,10 @@ export default function App() {
     ) || components[0];
 
     try {
+      if (typeof window !== 'undefined' && window.location.protocol === 'https:' && COMPILE_ENDPOINT.includes('localhost')) {
+        throw new Error('Local compiler unavailable on HTTPS public deployment. Falling back to in-browser engine.');
+      }
+
       const res = await fetch(COMPILE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
