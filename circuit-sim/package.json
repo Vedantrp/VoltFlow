@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
+    "typecheck": "tsc -b",
     "lint": "oxlint src",
     "test": "vitest run",
     "preview": "vite preview"
@@ -22,6 +23,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "three": "^0.185.1",
+    "typescript": "~6.0.2",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -30,7 +32,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
-    "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.10"
   }

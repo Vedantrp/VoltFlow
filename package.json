@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "start": "npm --prefix circuit-sim start",
-    "dev": "npm --prefix circuit-sim run dev"
+    "dev": "npm --prefix circuit-sim run dev",
+    "build": "npm --prefix circuit-sim run build"
   }
 }
