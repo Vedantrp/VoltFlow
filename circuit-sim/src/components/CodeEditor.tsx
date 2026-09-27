@@ -1,6 +1,13 @@
-import Editor, { type OnMount } from '@monaco-editor/react';
-import { Play, RefreshCw, Square } from 'lucide-react';
+import Editor, { loader, type OnMount } from '@monaco-editor/react';
+import { Loader2, Play, RefreshCw, Square } from 'lucide-react';
 import { useRef } from 'react';
+
+// Configure CDN loader for production stability
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
+  },
+});
 
 interface Props {
   code: string;
@@ -311,6 +318,11 @@ export function CodeEditor({
           value={code}
           onChange={(value) => onChange(value ?? '')}
           onMount={handleEditorMount}
+          loading={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#1e1e1e', color: '#94a3b8', fontSize: 13, gap: 8 }}>
+              <Loader2 size={16} className="spin" /> Initializing Arduino C++ Editor...
+            </div>
+          }
           options={{
             fontSize: 13,
             minimap: { enabled: false },
