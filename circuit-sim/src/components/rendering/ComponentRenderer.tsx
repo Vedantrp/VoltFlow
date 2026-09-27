@@ -1478,6 +1478,7 @@ const StepperMotorRenderer: React.FC<{
 // Dimension: 40 × 50 px, Anode (25, 44), Cathode (15, 44)
 // ─────────────────────────────────────────────────────────────────────────────
 const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: string; isOn: boolean }> = ({
+  isSelected,
   color,
   isOn,
 }) => {
@@ -1486,57 +1487,57 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
       case 'green':
         return {
           onCore: '#ffffff',
-          onBody: '#00ff66',
-          onGlow: '#00ff66',
-          offBody: '#083818',
-          offBase: '#041f0d',
-          border: '#00e65c',
+          onBody: '#22c55e',
+          onGlow: '#22c55e',
+          offBody: '#065f46',
+          offBase: '#022c22',
+          border: '#15803d',
         };
       case 'blue':
         return {
           onCore: '#ffffff',
-          onBody: '#00b7ff',
-          onGlow: '#00b7ff',
-          offBody: '#0d2448',
-          offBase: '#07152b',
-          border: '#00a2e8',
+          onBody: '#3b82f6',
+          onGlow: '#3b82f6',
+          offBody: '#1e40af',
+          offBase: '#0f172a',
+          border: '#1d4ed8',
         };
       case 'yellow':
         return {
           onCore: '#ffffff',
-          onBody: '#ffee00',
-          onGlow: '#ffee00',
-          offBody: '#4a3a08',
-          offBase: '#292004',
-          border: '#e6d500',
+          onBody: '#eab308',
+          onGlow: '#eab308',
+          offBody: '#854d0e',
+          offBase: '#451a03',
+          border: '#a16207',
         };
       case 'orange':
         return {
           onCore: '#ffffff',
-          onBody: '#ff6600',
-          onGlow: '#ff6600',
-          offBody: '#4c1d09',
-          offBase: '#2b1005',
-          border: '#ff5500',
+          onBody: '#f97316',
+          onGlow: '#f97316',
+          offBody: '#9a3412',
+          offBase: '#431407',
+          border: '#c2410c',
         };
       case 'white':
         return {
           onCore: '#ffffff',
           onBody: '#ffffff',
           onGlow: '#38bdf8',
-          offBody: '#2b3648',
-          offBase: '#18202c',
-          border: '#e2e8f0',
+          offBody: '#475569',
+          offBase: '#0f172a',
+          border: '#cbd5e1',
         };
       case 'red':
       default:
         return {
           onCore: '#ffffff',
-          onBody: '#ff003c',
-          onGlow: '#ff003c',
-          offBody: '#500b10',
-          offBase: '#2c0609',
-          border: '#e60036',
+          onBody: '#ef4444',
+          onGlow: '#ef4444',
+          offBody: '#991b1b',
+          offBase: '#450a0a',
+          border: '#b91c1c',
         };
     }
   };
@@ -2727,62 +2728,119 @@ const UltrasonicPingRenderer: React.FC<{ isSelected: boolean; isRunning: boolean
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure DHT11 Temperature & Humidity Sensor (57 × 117 px)
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// DHT11 3-Pin PCB Breakout Module (Exact Hardware Replica of User Image)
+// Dimension: 60 × 120 px
+// ─────────────────────────────────────────────────────────────────────────────
 const DHT11Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
   return (
-    <svg width="57" height="117" viewBox="0 0 57 117"
-      style={{ overflow: 'visible', filter: isSelected ? 'drop-shadow(0 0 14px rgba(56,189,248,0.8))' : 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))' }}>
+    <svg
+      width="60"
+      height="120"
+      viewBox="0 0 60 120"
+      style={{
+        overflow: 'visible',
+        filter: isSelected
+          ? 'drop-shadow(0 0 14px rgba(56,189,248,0.85)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
+          : 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))',
+      }}
+    >
       <defs>
-        <linearGradient id="dht11Body" x1="0%" y1="0%" x2="100%" y2="100%">
+        {/* PCB Matte Black Surface */}
+        <linearGradient id="dht11PcbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1e1e1e" />
+          <stop offset="50%" stopColor="#121212" />
+          <stop offset="100%" stopColor="#0a0a0a" />
+        </linearGradient>
+
+        {/* Cyan Sensor Casing */}
+        <linearGradient id="dht11CyanCasing" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#38bdf8" />
           <stop offset="40%" stopColor="#0284c7" />
           <stop offset="100%" stopColor="#0369a1" />
         </linearGradient>
-        <linearGradient id="dht11Lead" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f8fafc" />
-          <stop offset="50%" stopColor="#cbd5e1" />
-          <stop offset="100%" stopColor="#64748b" />
+
+        {/* Solder Joint Silver Metallic */}
+        <radialGradient id="dht11SolderPad" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="40%" stopColor="#cbd5e1" />
+          <stop offset="85%" stopColor="#64748b" />
+          <stop offset="100%" stopColor="#334155" />
+        </radialGradient>
+
+        {/* Male Header Pin Gold */}
+        <linearGradient id="dht11PinGold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="50%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#a16207" />
         </linearGradient>
       </defs>
 
-      {/* 4 Metal Terminal Leads */}
-      {[15, 24.5, 34.1, 43.8].map((x, i) => (
+      {/* 1. Main Black FR4 PCB Breakout Board */}
+      <rect x="2" y="2" width="56" height="116" rx="4" fill="url(#dht11PcbGrad)" stroke="#333333" strokeWidth="1" />
+
+      {/* White Silkscreen Perimeter Line */}
+      <rect x="4.5" y="4.5" width="51" height="111" rx="2.5" fill="none" stroke="#ffffff" strokeWidth="0.6" opacity="0.85" />
+
+      {/* 2. Top Mounted Cyan DHT11 Grid Sensor Unit */}
+      <rect x="7" y="8" width="46" height="58" rx="3.5" fill="url(#dht11CyanCasing)" stroke="#075985" strokeWidth="1.2" />
+
+      {/* 4x4 Grid Matrix of Vent Slots */}
+      {[0, 1, 2, 3].map((row) =>
+        [0, 1, 2, 3].map((col) => {
+          const x = 11.5 + col * 9.8;
+          const y = 12 + row * 10.5;
+          return (
+            <g key={`${row}-${col}`}>
+              <rect x={x} y={y} width="7.2" height="7.2" rx="1.2" fill="#0c4a6e" stroke="#0369a1" strokeWidth="0.6" />
+              <rect x={x + 0.8} y={y + 0.8} width="5.6" height="5.6" rx="0.8" fill="#042f2e" opacity="0.9" />
+            </g>
+          );
+        })
+      )}
+
+      {/* Silkscreen DHT11 Branding on Sensor Housing */}
+      <rect x="12" y="52" width="36" height="11" rx="1.5" fill="#075985" stroke="#0284c7" strokeWidth="0.5" />
+      <text x="30" y="60" fill="#ffffff" fontSize="6.5" fontWeight="950" fontFamily="monospace" textAnchor="middle" letterSpacing="0.8">DHT11</text>
+
+      {/* 3. Four Solder Connection Pads (Connecting Casing to PCB) */}
+      {[13, 24, 36, 47].map((x, i) => (
         <g key={i}>
-          <rect x={x - 1.2} y="85" width="2.4" height="30" rx="0.8" fill="url(#dht11Lead)" stroke="#475569" strokeWidth="0.4" />
-          <circle cx={x} cy="114.9" r="1.8" fill="#e2e8f0" stroke="#64748b" strokeWidth="0.5" />
+          <circle cx={x} cy="70" r="2.8" fill="url(#dht11SolderPad)" stroke="#1e293b" strokeWidth="0.6" />
+          <circle cx={x} cy="70" r="1" fill="#0f172a" />
         </g>
       ))}
 
-      {/* Top Mounting Tab */}
-      <path d="M 20 6 C 20 2 37 2 37 6 L 37 12 L 20 12 Z" fill="#0284c7" stroke="#0369a1" strokeWidth="1" />
-      <circle cx="28.5" cy="7" r="3" fill="#0f172a" stroke="#075985" strokeWidth="0.8" />
+      {/* 4. Center Metallic Mounting Hole */}
+      <circle cx="30" cy="81" r="5" fill="#0a0a0a" stroke="#cbd5e1" strokeWidth="1.2" />
+      <circle cx="30" cy="81" r="3.5" fill="#050505" />
 
-      {/* Cyan Housing Body */}
-      <rect x="2" y="10" width="53" height="78" rx="5" fill="url(#dht11Body)" stroke={isSelected ? '#38bdf8' : '#075985'} strokeWidth="1.5" />
+      {/* 5. Onboard SMD Components (Resistor & Power LED) */}
+      <rect x="9" y="78" width="8" height="5" rx="0.8" fill="#121212" stroke="#475569" strokeWidth="0.4" />
+      <text x="13" y="81.8" fill="#cbd5e1" fontSize="3" fontWeight="800" fontFamily="monospace" textAnchor="middle">103</text>
 
-      {/* Grille Window */}
-      <rect x="7" y="15" width="43" height="42" rx="3" fill="#075985" stroke="#0c4a6e" strokeWidth="1" />
+      {/* SMD Power LED (Red) */}
+      <rect x="43" y="78" width="7" height="5" rx="0.8" fill="#ef4444" stroke="#b91c1c" strokeWidth="0.4" />
+      <circle cx="46.5" cy="80.5" r="1.4" fill="#fca5a5" />
 
-      {/* Louver Slots */}
-      {[18, 22, 26, 30, 34, 38, 42, 46, 50, 54].map((y, i) => (
-        <g key={i}>
-          <line x1="9" y1={y} x2="27" y2={y} stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" />
-          <line x1="30" y1={y} x2="48" y2={y} stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" />
-        </g>
+      {/* 6. Silkscreen Terminal Labels */}
+      <text x="16" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">VCC</text>
+      <text x="30" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">OUT</text>
+      <text x="44" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">GND</text>
+
+      {/* 7. Header Plastic Housing Block */}
+      <rect x="8" y="96" width="44" height="9" rx="1.5" fill="#171717" stroke="#333333" strokeWidth="0.8" />
+      {[16, 30, 44].map((x) => (
+        <rect key={x} x={x - 2} y="97.5" width="4" height="6" rx="0.5" fill="#0a0a0a" stroke="#404040" strokeWidth="0.4" />
       ))}
 
-      <circle cx="28.5" cy="36" r="2.5" fill="#38bdf8" opacity="0.8" />
-
-      {/* DHT11 Silk */}
-      <rect x="8" y="60" width="41" height="15" rx="2" fill="#075985" stroke="#0284c7" strokeWidth="0.8" />
-      <text x="28.5" y="71" fill="#ffffff" fontSize="8.5" fontWeight="950" fontFamily="monospace" textAnchor="middle" letterSpacing="1">DHT11</text>
-      <text x="28.5" y="77" fill="#7dd3fc" fontSize="4.5" fontWeight="800" textAnchor="middle">HUMIDITY &amp; TEMP</text>
-
-      {/* Bottom Pin Labels */}
-      <rect x="6" y="79" width="45" height="7" rx="1.5" fill="#0c4a6e" />
-      <text x="15" y="84.5" fill="#bae6fd" fontSize="3.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">VCC</text>
-      <text x="24.5" y="84.5" fill="#bae6fd" fontSize="3.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">DAT</text>
-      <text x="34.1" y="84.5" fill="#7dd3fc" fontSize="3.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">NC</text>
-      <text x="43.8" y="84.5" fill="#bae6fd" fontSize="3.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">GND</text>
+      {/* 8. Three Male Connection Pins */}
+      {[16, 30, 44].map((x, i) => (
+        <g key={i}>
+          <rect x={x - 1.2} y="103" width="2.4" height="15" rx="0.5" fill="url(#dht11PinGold)" stroke="#854d0e" strokeWidth="0.4" />
+          <circle cx={x} cy="117" r="1.5" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.4" />
+        </g>
+      ))}
     </svg>
   );
 };
