@@ -398,19 +398,25 @@ export const Workspace2D: React.FC<Workspace2DProps> = ({
   }, [fitToScreen]);
 
   // ── Buzzer Audio Engine (Web Audio API) ─────────────────────────────────
-  const startBuzzerAudio = useCallback(() => {
+  const startBuzzerAudio = useCallback((freq = 2400) => {
     try {
       if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
         audioCtxRef.current = new AudioContext();
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
-      if (buzzerOscRef.current) return; // already beeping
+
+      const validFreq = isNaN(freq) || freq <= 0 ? 2400 : Math.min(10000, Math.max(50, freq));
+
+      if (buzzerOscRef.current) {
+        buzzerOscRef.current.frequency.setValueAtTime(validFreq, ctx.currentTime);
+        return;
+      }
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'square';
-      osc.frequency.setValueAtTime(2400, ctx.currentTime);
+      osc.frequency.setValueAtTime(validFreq, ctx.currentTime);
       gain.gain.setValueAtTime(0.08, ctx.currentTime);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -432,9 +438,10 @@ export const Workspace2D: React.FC<Workspace2DProps> = ({
 
   // React to buzzer state changes
   useEffect(() => {
-    const anyBuzzerActive = components.some((c) => c.type === 'buzzer' && c.state?.active === true);
-    if (isRunning && anyBuzzerActive) {
-      startBuzzerAudio();
+    const activeBuzzer = components.find((c) => c.type === 'buzzer' && (c.state?.active === true || c.state?.sounding === true));
+    if (isRunning && activeBuzzer) {
+      const targetFreq = activeBuzzer.state?.frequency || 2400;
+      startBuzzerAudio(targetFreq);
     } else {
       stopBuzzerAudio();
     }

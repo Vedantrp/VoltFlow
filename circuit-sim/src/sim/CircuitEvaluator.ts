@@ -307,8 +307,8 @@ export class CircuitEvaluator {
             this.graph.hasDriver(`${comp.id}:SIG`) ||
             this.graph.hasDriver(`${comp.id}:IN`);
 
-          // Active if positive terminal is HIGH and negative terminal is connected to GND / LOW
-          const isBeeping = posVal === true && posDriven && negVal !== true;
+          // Active if positive terminal is HIGH or active tone signal is playing
+          const isBeeping = (posVal === true && posDriven && negVal !== true) || comp.state?.sounding === true || comp.state?.active === true;
           updateState(comp.id, { active: isBeeping, sounding: isBeeping, frequency: comp.state?.frequency || 2400 });
         } else if (comp.type === 'dc-motor') {
           const posVal = this.graph.read(`${comp.id}:+`) ?? this.graph.read(`${comp.id}:1`) ?? this.graph.read(`${comp.id}:VCC`);

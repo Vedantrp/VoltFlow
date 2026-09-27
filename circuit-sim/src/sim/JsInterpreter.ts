@@ -482,17 +482,26 @@ export class JsInterpreter {
       const elseBlock = m[3] || '';
       const pinStr    = String(pinNum);
       const pinName   = this.getPinVarName(pinNum);
-      const inThen = thenBlock.includes('digitalWrite') && (thenBlock.includes(pinStr) || (pinName !== null && thenBlock.includes(pinName)));
-      const inElse = elseBlock.includes('digitalWrite') && (elseBlock.includes(pinStr) || (pinName !== null && elseBlock.includes(pinName)));
+
+      const hasPinInBlock = (blk: string) => {
+        if (!blk.includes('digitalWrite') && !blk.includes('tone') && !blk.includes('noTone')) return false;
+        if (blk.includes(pinStr)) return true;
+        if (pinName !== null && blk.includes(pinName)) return true;
+        return false;
+      };
+
+      const inThen = hasPinInBlock(thenBlock);
+      const inElse = hasPinInBlock(elseBlock);
       if (!inThen && !inElse) continue;
+
       const condVal = this.evalCondition(condition);
       if (condVal === null) continue;
       if (condVal) {
-        if (inThen && thenBlock.includes('HIGH')) return true;
-        if (inThen && thenBlock.includes('LOW'))  return false;
+        if (inThen && (thenBlock.includes('HIGH') || thenBlock.includes('tone('))) return true;
+        if (inThen && (thenBlock.includes('LOW') || thenBlock.includes('noTone('))) return false;
       } else {
-        if (inElse && elseBlock.includes('HIGH')) return true;
-        if (inElse && elseBlock.includes('LOW'))  return false;
+        if (inElse && (elseBlock.includes('HIGH') || elseBlock.includes('tone('))) return true;
+        if (inElse && (elseBlock.includes('LOW') || elseBlock.includes('noTone('))) return false;
         if (inThen) return false;
       }
     }

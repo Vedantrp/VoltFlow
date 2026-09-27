@@ -1,11 +1,11 @@
 import Editor, { loader, type OnMount } from '@monaco-editor/react';
-import { Loader2, Play, RefreshCw, Square } from 'lucide-react';
-import { useRef } from 'react';
+import { Loader2, Play, RefreshCw, Square, Zap, Code } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
 
-// Configure CDN loader for production stability
+// Configure CDN loader with reliable fast CDN mirrors
 loader.config({
   paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
+    vs: 'https://unpkg.com/monaco-editor@0.43.0/min/vs',
   },
 });
 
@@ -74,8 +74,22 @@ export function CodeEditor({
   compileError,
 }: Props) {
   const providerRegistered = useRef(false);
+  const [monacoLoaded, setMonacoLoaded] = useState(false);
+  const [forceSimpleMode, setForceSimpleMode] = useState(false);
+
+  // Auto fallback to Simple Code Editor if Monaco takes longer than 2.5 seconds on slow CDN connections
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!monacoLoaded) {
+        setForceSimpleMode(true);
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [monacoLoaded]);
 
   const handleEditorMount: OnMount = (_editor, monaco) => {
+    setMonacoLoaded(true);
+    setForceSimpleMode(false);
     if (providerRegistered.current) return;
     providerRegistered.current = true;
 
@@ -183,6 +197,22 @@ export function CodeEditor({
             range,
           },
           {
+            label: 'tone',
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'tone(${1:8}, ${2:1000}, ${3:500});',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            detail: 'Generate tone frequency on pin',
+            range,
+          },
+          {
+            label: 'noTone',
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: 'noTone(${1:8});',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            detail: 'Stop tone generation on pin',
+            range,
+          },
+          {
             label: 'Serial.begin',
             kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: 'Serial.begin(${1:9600});',
@@ -242,6 +272,27 @@ export function CodeEditor({
               <Square size={14} fill="#ffffff" /> Stop
             </button>
           )}
+
+          {/* Toggle between Monaco Editor & Fast Code Editor */}
+          <button
+            onClick={() => setForceSimpleMode((prev) => !prev)}
+            title={forceSimpleMode ? 'Switch to Monaco rich C++ editor' : 'Switch to fast lightweight code editor'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 11,
+              padding: '4px 8px',
+              borderRadius: 6,
+              backgroundColor: forceSimpleMode ? '#3f3f46' : '#27272a',
+              border: '1px solid #52525b',
+              color: forceSimpleMode ? '#38bdf8' : '#a1a1aa',
+              cursor: 'pointer',
+            }}
+          >
+            {forceSimpleMode ? <Zap size={12} fill="#38bdf8" /> : <Code size={12} />}
+            {forceSimpleMode ? 'Fast Editor' : 'Monaco Mode'}
+          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%', overflow: 'hidden' }}>
@@ -310,31 +361,71 @@ export function CodeEditor({
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative' }}>
-        <Editor
-          height="100%"
-          defaultLanguage="cpp"
-          theme="vs-dark"
-          value={code}
-          onChange={(value) => onChange(value ?? '')}
-          onMount={handleEditorMount}
-          loading={
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#1e1e1e', color: '#94a3b8', fontSize: 13, gap: 8 }}>
-              <Loader2 size={16} className="spin" /> Initializing Arduino C++ Editor...
-            </div>
-          }
-          options={{
-            fontSize: 13,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            padding: { top: 8 },
-            quickSuggestions: { other: true, comments: false, strings: true },
-            snippetSuggestions: 'top',
-            suggestOnTriggerCharacters: true,
-            acceptSuggestionOnEnter: 'on',
-            automaticLayout: true,
-          }}
-        />
+      <div style={{ flex: 1, minHeight: 0, width: '100%', position: 'relative', overflow: 'hidden' }}>
+        {forceSimpleMode ? (
+          <textarea
+            value={code}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="// Type or paste your Arduino C++ code here..."
+            spellCheck={false}
+            style={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#18181b',
+              color: '#4ade80',
+              fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+              fontSize: 13,
+              lineHeight: '1.5',
+              padding: 12,
+              border: '1px solid #3f3f46',
+              borderRadius: 6,
+              outline: 'none',
+              resize: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        ) : (
+          <Editor
+            height="100%"
+            defaultLanguage="cpp"
+            theme="vs-dark"
+            value={code}
+            onChange={(value) => onChange(value ?? '')}
+            onMount={handleEditorMount}
+            loading={
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#1e1e1e', color: '#94a3b8', fontSize: 13, gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Loader2 size={16} className="spin" /> Initializing Arduino C++ Editor...
+                </div>
+                <button
+                  onClick={() => setForceSimpleMode(true)}
+                  style={{
+                    fontSize: 11,
+                    padding: '4px 10px',
+                    borderRadius: 4,
+                    backgroundColor: '#27272a',
+                    border: '1px solid #52525b',
+                    color: '#38bdf8',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ⚡ Open Fast Code Editor Immediately
+                </button>
+              </div>
+            }
+            options={{
+              fontSize: 13,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              padding: { top: 8 },
+              quickSuggestions: { other: true, comments: false, strings: true },
+              snippetSuggestions: 'top',
+              suggestOnTriggerCharacters: true,
+              acceptSuggestionOnEnter: 'on',
+              automaticLayout: true,
+            }}
+          />
+        )}
       </div>
       {compileError && (
         <pre className="compile-error" style={{ color: '#ef4444', backgroundColor: '#450a0a', padding: 8, borderRadius: 6, fontSize: 11, whiteSpace: 'pre-wrap', marginTop: 6 }}>
@@ -344,3 +435,4 @@ export function CodeEditor({
     </div>
   );
 }
+

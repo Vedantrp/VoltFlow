@@ -419,9 +419,24 @@ export default function App() {
         },
         onDigitalWrite: (pin, high) => {
           if (!simulationActiveRef.current) return;
+          const liveComps = useCircuitStore.getState().components;
+          const liveWires = useCircuitStore.getState().wires;
           if (mcuComp) {
-            const liveComps = useCircuitStore.getState().components;
             evaluator.handlePinOutputChange(mcuComp, String(pin), high, liveComps, updateComponentState);
+          }
+          const pinStr = String(pin);
+          const targetBuzzer =
+            liveComps.find((c) => {
+              if (c.type !== 'buzzer') return false;
+              return liveWires.some(
+                (w) =>
+                  (w.fromComponentId === mcuComp?.id && (w.fromPinId === pinStr || w.fromPinId === `D${pinStr}`) && w.toComponentId === c.id) ||
+                  (w.toComponentId === mcuComp?.id && (w.toPinId === pinStr || w.toPinId === `D${pinStr}`) && w.fromComponentId === c.id)
+              );
+            }) || liveComps.find((c) => c.type === 'buzzer');
+
+          if (targetBuzzer) {
+            updateComponentState(targetBuzzer.id, { active: high, sounding: high });
           }
         },
         onDigitalRead: (pin) => {
