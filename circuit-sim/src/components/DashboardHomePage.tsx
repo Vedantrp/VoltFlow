@@ -318,132 +318,23 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
             style={{
               backgroundColor: '#F7F4EE',
               borderBottom: '1px solid #E2DACD',
-              padding: '48px 24px 64px 24px',
+              padding: '64px 24px 80px 24px',
               position: 'relative',
               overflow: 'hidden',
             }}
           >
             <div
               style={{
-                maxWidth: 1320,
+                maxWidth: 1280,
                 margin: '0 auto',
                 display: 'grid',
-                gridTemplateColumns: '310px 1fr 400px',
-                gap: 28,
+                gridTemplateColumns: '55% 45%',
+                gap: 40,
                 alignItems: 'center',
               }}
             >
-              {/* Left Column: Quick Workbench Panel */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 16,
-                  border: '1px solid #E2DACD',
-                  padding: '20px',
-                  boxShadow: '0 8px 24px rgba(47, 62, 52, 0.06)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 14,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F0EAE1', paddingBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Zap size={17} color="#E98B5A" />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1F2321' }}>Quick Workbench</span>
-                  </div>
-                  <span style={{ fontSize: 10, fontWeight: 800, backgroundColor: '#E0EBE2', color: '#2F3E34', padding: '2px 8px', borderRadius: 12 }}>
-                    SIMULATOR
-                  </span>
-                </div>
-
-                {/* Quick Action Button */}
-                <button
-                  onClick={onLaunchSimulator}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#E98B5A',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    padding: '11px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 14px rgba(233, 139, 90, 0.3)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Plus size={16} /> New Blank Project
-                  </span>
-                  <ArrowRight size={14} />
-                </button>
-
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#82977E', marginTop: 2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  FEATURED STARTERS
-                </div>
-
-                {[
-                  { title: 'Arduino LED Blink', desc: 'ATmega328P + 5mm Red LED', presetId: 'arduino-blink' },
-                  { title: 'OLED I2C Weather Lab', desc: 'SSD1306 Display + DHT11 Sensor', presetId: 'oled-dht11' },
-                  { title: 'Stepper Motor Driver', desc: 'NEMA 17 Stepper + ULN2003 Driver', presetId: 'stepper-driver' },
-                ].map((starter, i) => (
-                  <div
-                    key={i}
-                    onClick={() => {
-                      const t = CIRCUIT_TEMPLATES.find((item) => item.id.includes(starter.presetId) || item.title.toLowerCase().includes(starter.title.toLowerCase().split(' ')[0]));
-                      if (t) {
-                        onCreatePresetCircuit(t.id, t);
-                      } else {
-                        onLaunchSimulator();
-                      }
-                    }}
-                    style={{
-                      padding: '9px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #F0EAE1',
-                      backgroundColor: '#FBF9F5',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#E98B5A';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FBF9F5';
-                      e.currentTarget.style.borderColor = '#F0EAE1';
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1F2321' }}>{starter.title}</div>
-                      <div style={{ fontSize: 10, color: '#5F6862' }}>{starter.desc}</div>
-                    </div>
-                    <ChevronRight size={14} color="#E98B5A" />
-                  </div>
-                ))}
-
-                {/* Simulator Capabilities Box */}
-                <div style={{ backgroundColor: '#F7F4EE', border: '1px solid #EAE3D6', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#4A524D' }}>
-                  <div style={{ fontWeight: 800, color: '#2F3E34', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Activity size={12} color="#E98B5A" /> Studio Specs
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 10.5, color: '#5F6862' }}>
-                    <span>• SPICE 3F5 Nodal Engine (250µs)</span>
-                    <span>• 16MHz AVR Microcontroller Core</span>
-                    <span>• 68 Physical Tinkercad Components</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Center Column: Hero Content */}
               <div>
+                {/* Tagline Eyebrow */}
                 <div
                   style={{
                     fontSize: 12,
@@ -451,7 +342,7 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
                     color: '#82977E',
-                    marginBottom: 14,
+                    marginBottom: 16,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -468,15 +359,16 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                   ELECTRONICS MADE SIMPLE
                 </div>
 
+                {/* Hero Title */}
                 <h1
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: 48,
+                    fontSize: 56,
                     fontWeight: 700,
                     color: '#1F2321',
                     lineHeight: 1.12,
                     letterSpacing: '-0.02em',
-                    marginBottom: 18,
+                    marginBottom: 22,
                   }}
                 >
                   Design. Simulate. <span style={{ color: '#E98B5A' }}>Build.</span>
@@ -484,27 +376,27 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
 
                 <p
                   style={{
-                    fontSize: 15,
+                    fontSize: 17,
                     color: '#4A524D',
-                    lineHeight: 1.6,
-                    marginBottom: 26,
-                    maxWidth: 520,
+                    lineHeight: 1.65,
+                    marginBottom: 36,
+                    maxWidth: 560,
                     fontWeight: 400,
                   }}
                 >
                   A modern EDA platform to design circuits, simulate microcontroller firmware, and create professional PCB layouts — all in one place.
                 </p>
 
-                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button
                     onClick={onLaunchSimulator}
                     style={{
                       backgroundColor: '#E98B5A',
                       color: '#FFFFFF',
                       border: 'none',
-                      padding: '13px 26px',
+                      padding: '14px 28px',
                       borderRadius: 10,
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -514,7 +406,7 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                       transition: 'transform 0.15s ease',
                     }}
                   >
-                    Start Designing <ArrowRight size={16} />
+                    Start Designing <ArrowRight size={17} />
                   </button>
 
                   <button
@@ -526,9 +418,9 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                       backgroundColor: '#FFFFFF',
                       color: '#2F3E34',
                       border: '1px solid #CBBBA0',
-                      padding: '13px 22px',
+                      padding: '14px 24px',
                       borderRadius: 10,
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -537,14 +429,15 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                       boxShadow: '0 2px 8px rgba(47, 62, 52, 0.05)',
                     }}
                   >
-                    <Layers size={16} color="#E98B5A" /> Browse 50 Templates
+                    <Layers size={17} color="#E98B5A" /> Browse 50 Templates
                   </button>
                 </div>
 
+                {/* Creator Credit Badge */}
                 <div
                   style={{
                     marginTop: 18,
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 600,
                     color: '#5F6862',
                     display: 'flex',
@@ -560,87 +453,83 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
-                  <span style={{ backgroundColor: '#82977E', color: '#FFFFFF', padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>
+                {/* Feature Pills */}
+                <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      backgroundColor: '#82977E',
+                      color: '#FFFFFF',
+                      padding: '5px 12px',
+                      borderRadius: 16,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
                     SPICE 3F5
                   </span>
-                  <span style={{ backgroundColor: '#E98B5A', color: '#FFFFFF', padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      backgroundColor: '#E98B5A',
+                      color: '#FFFFFF',
+                      padding: '5px 12px',
+                      borderRadius: 16,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
                     AVR 16MHz
                   </span>
-                  <span style={{ backgroundColor: '#CBBBA0', color: '#1F2321', padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      backgroundColor: '#CBBBA0',
+                      color: '#1F2321',
+                      padding: '5px 12px',
+                      borderRadius: 16,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
                     Gerber Export
                   </span>
-                  <span style={{ backgroundColor: '#2F3E34', color: '#FFFFFF', padding: '4px 10px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      backgroundColor: '#2F3E34',
+                      color: '#FFFFFF',
+                      padding: '5px 12px',
+                      borderRadius: 16,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
                     Live LCD &amp; Oscilloscope
                   </span>
                 </div>
               </div>
 
-              {/* Right Column: Live SVG Visual Workbench Showcase */}
+              {/* Main PCB / Circuit Visual Anchor */}
               <div
                 style={{
                   position: 'relative',
                   width: '100%',
                   display: 'flex',
-                  justifyContent: 'center',
+                  justifyContent: 'flex-end',
                   alignItems: 'center',
+                  transform: 'translate(10px, 16px)',
                 }}
               >
-                <div
+                <img
+                  src="/voltflow-pcb-hero.png"
+                  alt="VoltFlow Studio PCB & Circuit Visual"
                   style={{
                     width: '100%',
-                    maxWidth: 400,
-                    backgroundColor: '#1E293B',
+                    maxWidth: 580,
+                    height: 'auto',
+                    objectFit: 'contain',
                     borderRadius: 16,
-                    border: '1px solid #334155',
-                    padding: 16,
-                    boxShadow: '0 16px 36px rgba(15, 23, 42, 0.25)',
+                    boxShadow: '0 16px 36px rgba(47, 62, 52, 0.08)',
+                    display: 'block',
                   }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: '1px solid #334155', paddingBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Cpu size={14} color="#38BDF8" />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#F8FAFC', fontFamily: 'monospace' }}>WORKBENCH SIMULATOR</span>
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: '#22C55E', backgroundColor: '#14532D', padding: '2px 8px', borderRadius: 10 }}>
-                      ● RUNNING
-                    </span>
-                  </div>
-
-                  <svg width="100%" height="210" viewBox="0 0 370 210" style={{ overflow: 'visible' }}>
-                    {/* PCB Copper Trace Grid Lines */}
-                    <pattern id="heroGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#334155" strokeWidth="0.5" />
-                    </pattern>
-                    <rect width="370" height="210" fill="url(#heroGrid)" rx="8" />
-
-                    {/* Oscilloscope Wave Window */}
-                    <rect x="220" y="15" width="135" height="75" rx="6" fill="#090D16" stroke="#0EA5E9" strokeWidth="1" />
-                    <text x="230" y="30" fill="#38BDF8" fontSize="9" fontWeight="800" fontFamily="monospace">CH1: 5.0V Sine</text>
-                    <path
-                      d="M 225 55 Q 240 25 255 55 T 285 55 T 315 55 T 345 55"
-                      fill="none"
-                      stroke="#22C55E"
-                      strokeWidth="2"
-                    />
-
-                    {/* Arduino Mini Vector Graphic */}
-                    <rect x="15" y="25" width="180" height="150" rx="6" fill="#00979C" stroke="#006567" strokeWidth="1.5" />
-                    <rect x="15" y="75" width="24" height="40" fill="#CBD5E1" />
-                    <rect x="55" y="80" width="60" height="40" rx="2" fill="#18181B" />
-                    <text x="85" y="104" fill="#E2E8F0" fontSize="8" fontWeight="900" fontFamily="monospace" textAnchor="middle">ATMEGA328P</text>
-                    <circle cx="170" cy="45" r="4" fill="#22C55E" />
-
-                    {/* Domed 5mm Red Glowing LED */}
-                    <g transform="translate(250, 115)">
-                      <circle cx="20" cy="20" r="24" fill="#EF4444" opacity="0.3" />
-                      <circle cx="20" cy="20" r="16" fill="#EF4444" opacity="0.6" />
-                      <path d="M 12 30 C 12 12 28 12 28 30 Z" fill="#EF4444" stroke="#B91C1C" strokeWidth="1.5" />
-                      <line x1="16" y1="30" x2="16" y2="55" stroke="#CBD5E1" strokeWidth="2.5" />
-                      <path d="M 24 30 L 24 38 L 28 44 L 26 55" fill="none" stroke="#CBD5E1" strokeWidth="2.5" />
-                    </g>
-                  </svg>
-                </div>
+                />
               </div>
             </div>
           </section>
