@@ -39,6 +39,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Cleanup reCAPTCHA verifier instance when modal closes or unmounts
+  React.useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).recaptchaVerifier) {
+        try {
+          (window as any).recaptchaVerifier.clear();
+        } catch {}
+        (window as any).recaptchaVerifier = null;
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   const resetForm = () => {
@@ -167,6 +179,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Permanent reCAPTCHA container element */}
+        <div id="recaptcha-container" style={{ display: 'none' }}></div>
+
         {/* Header */}
         <div
           style={{

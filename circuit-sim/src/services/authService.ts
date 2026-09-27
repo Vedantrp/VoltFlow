@@ -531,35 +531,45 @@ class AuthService {
 
     if (auth) {
       try {
+        let containerEl: HTMLElement | null = typeof document !== 'undefined' ? document.getElementById(containerId) : null;
+        if (typeof document !== 'undefined' && !containerEl) {
+          containerEl = document.createElement('div');
+          containerEl.id = containerId;
+          containerEl.style.display = 'none';
+          document.body.appendChild(containerEl);
+        }
+
         let recaptchaVerifier = (window as any).recaptchaVerifier;
-        if (!recaptchaVerifier) {
-          recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+        if (!recaptchaVerifier && containerEl) {
+          recaptchaVerifier = new RecaptchaVerifier(auth, containerEl, {
             size: 'invisible',
             callback: () => {},
           });
           (window as any).recaptchaVerifier = recaptchaVerifier;
         }
 
-        const confirmationResult = await withTimeout(
-          signInWithPhoneNumber(auth, cleanPhone, recaptchaVerifier),
-          6000,
-          'Firebase Phone Auth request timed out.'
-        );
-        this.phoneConfirmationResult = confirmationResult;
+        if (recaptchaVerifier) {
+          const confirmationResult = await withTimeout(
+            signInWithPhoneNumber(auth, cleanPhone, recaptchaVerifier),
+            5000,
+            'Firebase Phone Auth request timed out.'
+          );
+          this.phoneConfirmationResult = confirmationResult;
 
-        // Save last sent timestamp
-        otps[cleanPhone] = {
-          code: '123456',
-          expiresAt: now + 10 * 60 * 1000,
-          attempts: 0,
-          lastSentAt: now,
-        };
-        safeStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otps));
+          // Save last sent timestamp
+          otps[cleanPhone] = {
+            code: '123456',
+            expiresAt: now + 10 * 60 * 1000,
+            attempts: 0,
+            lastSentAt: now,
+          };
+          safeStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otps));
 
-        return {
-          success: true,
-          message: `SMS verification code sent to ${cleanPhone}. Please enter the 6-digit code received on your phone.`,
-        };
+          return {
+            success: true,
+            message: `SMS verification code sent to ${cleanPhone}. Please enter the 6-digit code received on your phone.`,
+          };
+        }
       } catch (fbErr: any) {
         firebaseFailed = true;
         if ((window as any).recaptchaVerifier) {
@@ -568,7 +578,7 @@ class AuthService {
           } catch {}
           (window as any).recaptchaVerifier = null;
         }
-        console.warn('Firebase Phone Auth unavailable or unconfigured, activating instant demo code mode:', fbErr);
+        console.warn('Firebase Phone Auth / Recaptcha unavailable or blocked by client, activating instant demo code mode:', fbErr);
       }
     }
 
