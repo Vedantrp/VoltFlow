@@ -2,15 +2,15 @@ import type { ComponentCategory, ComponentDefinition } from './types';
 
 export const CATEGORIES: ComponentCategory[] = [
   'All',
-  'Basic',
   'Microcontrollers',
+  'Communication',
   'Sensors',
   'Actuators',
+  'Displays',
   'Input',
-  'Output',
+  'Passive',
   'Power',
-  'Power & Relays',
-  'General',
+  'Prototyping',
 ];
 
 // Helper functions for full pin hole generation on breadboards
@@ -234,7 +234,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'arduino-uno',
     name: 'Arduino Uno R3',
-    category: 'Basic',
+    category: 'Microcontrollers',
     description: 'ATmega328P microcontroller board with 14 Digital I/O and 6 Analog inputs.',
     wokwiTag: 'wokwi-arduino-uno',
     width: 275.5,
@@ -437,7 +437,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'breadboard-mini',
     name: 'Breadboard Small (Mini 170)',
-    category: 'Basic',
+    category: 'Prototyping',
     description: '170 tie-point compact solderless mini breadboard.',
     width: 200,
     height: 120,
@@ -450,7 +450,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'breadboard-half',
     name: 'Breadboard Medium (Half 400)',
-    category: 'Basic',
+    category: 'Prototyping',
     description: '400 tie-point solderless breadboard with power rails.',
     width: 340,
     height: 180,
@@ -463,7 +463,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'breadboard-full',
     name: 'Breadboard Large (Full 830)',
-    category: 'Basic',
+    category: 'Prototyping',
     description: '830 tie-point full length solderless breadboard with dual power rails.',
     width: 680,
     height: 180,
@@ -559,7 +559,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'analog-joystick',
     name: '2-Axis Analog Joystick',
-    category: 'Sensors',
+    category: 'Input',
     description: 'Dual-axis thumb joystick with push button switch.',
     wokwiTag: 'wokwi-analog-joystick',
     width: 80,
@@ -611,7 +611,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'pushbutton',
     name: 'Pushbutton',
-    category: 'Basic',
+    category: 'Input',
     description: 'Tactile momentary push button.',
     wokwiTag: 'wokwi-pushbutton',
     defaultProps: { color: 'green' },
@@ -629,7 +629,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'potentiometer',
     name: 'Potentiometer 10k',
-    category: 'Basic',
+    category: 'Input',
     description: 'Rotary potentiometer dial.',
     wokwiTag: 'wokwi-potentiometer',
     defaultProps: { value: 512 },
@@ -712,7 +712,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'pir-sensor',
     name: 'PIR Motion Sensor',
-    category: 'Input',
+    category: 'Sensors',
     description: 'PIR Motion Sensor Module with honeycomb dome lens.',
     wokwiTag: 'wokwi-pir-motion-sensor',
     width: 124,
@@ -744,7 +744,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'bluetooth-hc05',
     name: 'HC-05 Bluetooth Module',
-    category: 'Sensors',
+    category: 'Communication',
     description: 'HC-05 Bluetooth 2.0+EDR serial pass-through module with green SMD core, CSR chipset, flash memory with gold chevron, and 6-pin breakout header.',
     width: 140,
     height: 70,
@@ -763,7 +763,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'esp-01',
     name: 'ESP-01S Wi-Fi Module',
-    category: 'Sensors',
+    category: 'Communication',
     description: 'ESP8266 ESP-01S Wi-Fi transceiver with 2x4 dual-row header and onboard PCB antenna.',
     width: 90,
     height: 60,
@@ -880,7 +880,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'lcd1602',
     name: 'LCD Display 16x2',
-    category: 'Actuators',
+    category: 'Displays',
     description: '16x2 I2C character LCD screen with backlight.',
     wokwiTag: 'wokwi-lcd1602',
     width: 230,
@@ -899,7 +899,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'battery-9v',
     name: '9V Alkaline Battery',
-    category: 'Power & Relays',
+    category: 'Power',
     description: 'Standard 9V PP3 / 6F22 transistor battery with top snap connector terminals.',
     wokwiTag: 'voltflow-battery-9v',
     width: 80,
@@ -914,7 +914,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'coin-cell-3v',
     name: '3V Coin Cell (CR2032)',
-    category: 'Power & Relays',
+    category: 'Power',
     description: '3V Lithium button / coin cell battery (CR2032) for low-power circuits.',
     wokwiTag: 'voltflow-coin-cell-3v',
     width: 85,
@@ -929,7 +929,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'battery-4x-aa',
     name: '4x AA Battery Pack (6V)',
-    category: 'Power & Relays',
+    category: 'Power',
     description: '4x 1.5V AA battery holder producing 6.0V DC with flying lead terminals.',
     wokwiTag: 'voltflow-battery-4x-aa',
     width: 120,
@@ -944,7 +944,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'battery-1.5v-aa',
     name: '1.5V AA Battery',
-    category: 'Power & Relays',
+    category: 'Power',
     description: 'Single 1.5V AA alkaline cell with positive top nub and flat negative base.',
     wokwiTag: 'voltflow-battery-1-5v-aa',
     width: 42,
@@ -959,7 +959,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'breadboard-power-supply',
     name: 'Breadboard Power Supply (MB102)',
-    category: 'Power & Relays',
+    category: 'Power',
     description: 'MB102 breadboard plug-in power module with selectable 3.3V / 5.0V dual rail outputs.',
     wokwiTag: 'voltflow-breadboard-power-supply',
     width: 130,
@@ -977,7 +977,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'relay-5v',
     name: '5V Relay Module (1-Channel)',
-    category: 'Power & Relays',
+    category: 'Actuators',
     description: '1-Channel 5V Relay breakout module with Songle SRD-05VDC, status LED, and high-voltage screw terminal.',
     width: 140,
     height: 100,
@@ -996,7 +996,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'relay-5v-2ch',
     name: '5V Relay Module (2-Channel)',
-    category: 'Power & Relays',
+    category: 'Actuators',
     description: '2-Channel 5V Relay breakout board with dual Songle SRD-05VDC relays, optocoupler isolation, and screw terminals.',
     width: 200,
     height: 110,
@@ -1022,7 +1022,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'slide-switch',
     name: 'Slide Switch (SPDT)',
-    category: 'Basic',
+    category: 'Input',
     description: 'Single Pole Double Throw (SPDT) slide switch for circuit routing and power toggling.',
     wokwiTag: 'wokwi-slide-switch',
     width: 32,
@@ -1039,7 +1039,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'diode-1n4007',
     name: '1N4007 Rectifier Diode',
-    category: 'Basic',
+    category: 'Passive',
     description: '1A 1000V standard silicon rectifier diode with cathode stripe marker.',
     wokwiTag: 'voltflow-diode-1n4007',
     width: 65,
@@ -1054,7 +1054,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'transistor-npn',
     name: 'NPN Transistor (2N2222)',
-    category: 'Basic',
+    category: 'Passive',
     description: 'General purpose NPN bipolar junction transistor for switching and amplification in TO-92 casing.',
     wokwiTag: 'voltflow-transistor-npn',
     width: 50,
@@ -1070,7 +1070,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'capacitor-electrolytic',
     name: 'Electrolytic Capacitor 100µF',
-    category: 'Basic',
+    category: 'Passive',
     description: '100uF 16V polarized radial electrolytic capacitor with white negative stripe marker.',
     wokwiTag: 'voltflow-capacitor-electrolytic',
     width: 50,
@@ -1086,7 +1086,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'capacitor-ceramic',
     name: 'Ceramic Capacitor 100nF (0.1µF)',
-    category: 'Basic',
+    category: 'Passive',
     description: '100nF 50V ceramic disc capacitor labeled 104 for high-frequency noise decoupling.',
     width: 46,
     height: 55,
@@ -1103,7 +1103,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'inductor',
     name: 'Inductor',
-    category: 'General',
+    category: 'Passive',
     description: '100µH high-current wirewound copper coil inductor.',
     width: 70,
     height: 26,
@@ -1117,7 +1117,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'zener-diode',
     name: 'Zener Diode',
-    category: 'General',
+    category: 'Passive',
     description: '3.3V / 5.1V voltage regulation silicon zener diode with cathode stripe.',
     wokwiTag: 'voltflow-zener-diode',
     width: 65,
@@ -1134,7 +1134,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'flex-sensor',
     name: 'Flex Sensor',
-    category: 'Input',
+    category: 'Sensors',
     description: 'Variable resistive bend sensor for angle and motion sensing.',
     width: 35,
     height: 120,
@@ -1148,7 +1148,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'force-sensor',
     name: 'Force Sensor (FSR)',
-    category: 'Input',
+    category: 'Sensors',
     description: 'Force Sensing Resistor (FSR402) that varies resistance with physical pressure.',
     width: 48,
     height: 110,
@@ -1162,7 +1162,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'ultrasonic-ping',
     name: 'Ultrasonic Distance (PING)))',
-    category: 'Input',
+    category: 'Sensors',
     description: 'Parallax PING))) ultrasonic distance sensor (3-pin: GND, 5V, SIG).',
     width: 155,
     height: 85,
@@ -1177,7 +1177,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'soil-moisture',
     name: 'Soil Moisture Sensor',
-    category: 'Input',
+    category: 'Sensors',
     description: 'Dual-prong resistive soil humidity detection sensor for irrigation monitoring.',
     width: 55,
     height: 120,
@@ -1192,7 +1192,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'tilt-sensor',
     name: 'Tilt Sensor',
-    category: 'Input',
+    category: 'Sensors',
     description: 'SW-200D ball tilt vibration and orientation switch module.',
     wokwiTag: 'wokwi-tilt-switch',
     width: 88.4,
@@ -1265,7 +1265,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'led-rgb',
     name: 'LED RGB',
-    category: 'Output',
+    category: 'Displays',
     description: 'Common cathode 4-pin diffused RGB LED (Red, Cathode, Green, Blue).',
     wokwiTag: 'wokwi-rgb-led',
     width: 42.1,
@@ -1282,7 +1282,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'light-bulb',
     name: 'Light bulb',
-    category: 'Output',
+    category: 'Actuators',
     description: 'Incandescent filament lamp for DC/AC illumination circuits.',
     width: 55,
     height: 75,
@@ -1296,7 +1296,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'neopixel',
     name: 'NeoPixel',
-    category: 'Output',
+    category: 'Displays',
     description: 'Individually addressable WS2812 RGB LED.',
     wokwiTag: 'wokwi-neopixel',
     width: 21.4,
@@ -1313,7 +1313,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'neopixel-ring-12',
     name: 'NeoPixel Ring 12',
-    category: 'Output',
+    category: 'Displays',
     description: 'Ring of 12 cascaded WS2812 RGB LEDs for halo lighting effects.',
     wokwiTag: 'wokwi-led-ring',
     width: 117.5,
@@ -1330,7 +1330,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'neopixel-ring-16',
     name: 'NeoPixel Ring 16',
-    category: 'Output',
+    category: 'Displays',
     description: 'Ring of 16 cascaded WS2812 RGB LEDs for circular animations.',
     wokwiTag: 'wokwi-led-ring',
     width: 141.6,
@@ -1347,7 +1347,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'dc-motor',
     name: 'DC Motor',
-    category: 'Output',
+    category: 'Actuators',
     description: 'Standard cylindrical hobby DC motor for rotational actuation.',
     width: 75,
     height: 75,
@@ -1361,7 +1361,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'dc-motor-encoder',
     name: 'DC Motor with encoder',
-    category: 'Output',
+    category: 'Actuators',
     description: 'DC motor equipped with dual-channel quadrature rotary encoder.',
     width: 75,
     height: 85,
@@ -1378,7 +1378,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'gear-motor',
     name: 'Hobby Gearmotor',
-    category: 'Output',
+    category: 'Actuators',
     description: 'Yellow TT dual-shaft high-torque DC hobby gear motor for robotics.',
     width: 80,
     height: 110,
@@ -1406,7 +1406,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'segment-7',
     name: '7 Segment Display',
-    category: 'Output',
+    category: 'Displays',
     description: 'Single-digit 7-segment LED display with decimal point.',
     wokwiTag: 'wokwi-7segment',
     width: 47.4,
@@ -1429,7 +1429,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'segment-7-4digit',
     name: '7 Segment (4-Digit)',
-    category: 'Output',
+    category: 'Displays',
     description: '4-digit 7-segment clock display with colon (KW4-56NALB pinout).',
     wokwiTag: 'wokwi-7segment',
     width: 189.7,
@@ -1456,7 +1456,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'lcd1602-i2c',
     name: 'LCD 16 x 2 (I2C)',
-    category: 'Output',
+    category: 'Displays',
     description: '16x2 character LCD screen with soldered PCF8574 I2C adapter backpack.',
     wokwiTag: 'wokwi-lcd1602',
     width: 230,
@@ -1577,7 +1577,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'ne555',
     name: 'NE555 Timer IC',
-    category: 'Basic',
+    category: 'Passive',
     description: 'Precision 555 timer IC for pulse generation, square wave oscillation, and timing.',
     defaultProps: {},
     width: 80,
@@ -1598,7 +1598,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'opamp',
     name: 'LM741 Op-Amp',
-    category: 'Basic',
+    category: 'Passive',
     description: 'General purpose operational amplifier for signal amplification and filtering.',
     defaultProps: {},
     width: 80,
