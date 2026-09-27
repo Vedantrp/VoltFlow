@@ -606,6 +606,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           ) : (
             /* Phone OTP Form */
             <div>
+              {/* Invisible Recaptcha Container for Firebase Phone Auth */}
+              <div id="recaptcha-container"></div>
+
               {!otpSent ? (
                 <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
@@ -617,7 +620,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       <input
                         type="tel"
                         required
-                        placeholder="+1 555-0199"
+                        placeholder="+1 555-0199 or +91 9876543210"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         style={{
@@ -631,7 +634,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       />
                     </div>
                     <span style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'block' }}>
-                      Standard international format (e.g. +1 555-0199). Demo test code is 123456.
+                      Enter your phone number in international E.164 format (e.g. +1 555-0199 or +91 9876543210).
                     </span>
                   </div>
 
@@ -675,7 +678,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       type="text"
                       maxLength={6}
                       required
-                      placeholder="123456"
+                      placeholder="••••••"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
                       style={{

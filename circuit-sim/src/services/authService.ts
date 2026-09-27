@@ -9,6 +9,9 @@ import {
   signInWithPopup,
   firebaseSignOut,
   firebaseOnAuthStateChanged,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
   doc,
   setDoc,
   getDocs,
@@ -156,6 +159,7 @@ async function hashPassword(password: string): Promise<string> {
 class AuthService {
   private currentUser: UserProfile | null = null;
   private listeners: ((user: UserProfile | null) => void)[] = [];
+  private phoneConfirmationResult: ConfirmationResult | null = null;
 
   constructor() {
     this.restoreSession();
@@ -490,12 +494,44 @@ class AuthService {
   }
 
   // --- 4. Phone Authentication (OTP) ---
-  public async sendPhoneOtp(rawPhone: string): Promise<{ success: boolean; message: string }> {
+  public async sendPhoneOtp(
+    rawPhone: string,
+    containerId: string = 'recaptcha-container'
+  ): Promise<{ success: boolean; message: string }> {
     const cleanPhone = rawPhone.trim().replace(/[\s-]/g, '');
     if (!cleanPhone || cleanPhone.length < 8 || !/^\+?[0-9]{8,15}$/.test(cleanPhone)) {
-      throw new Error('Please enter a valid phone number with country code (e.g. +1 555-0199).');
+      throw new Error('Please enter a valid phone number with country code (e.g. +1 555-0199 or +91 9876543210).');
     }
 
+    if (auth) {
+      try {
+        let recaptchaVerifier = (window as any).recaptchaVerifier;
+        if (!recaptchaVerifier) {
+          recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+            size: 'invisible',
+            callback: () => {},
+          });
+          (window as any).recaptchaVerifier = recaptchaVerifier;
+        }
+
+        const confirmationResult = await signInWithPhoneNumber(auth, cleanPhone, recaptchaVerifier);
+        this.phoneConfirmationResult = confirmationResult;
+        return {
+          success: true,
+          message: `SMS verification code sent to ${cleanPhone}. Please enter the 6-digit code received on your phone.`,
+        };
+      } catch (fbErr: any) {
+        if ((window as any).recaptchaVerifier) {
+          try {
+            (window as any).recaptchaVerifier.clear();
+          } catch {}
+          (window as any).recaptchaVerifier = null;
+        }
+        throw new Error(formatFirebaseError(fbErr));
+      }
+    }
+
+    // Local Storage / Dev Testing Fallback Mode
     const otps: Record<string, StoredOtp> = JSON.parse(safeStorage.getItem(OTP_STORAGE_KEY) || '{}');
     const existing = otps[cleanPhone];
     const now = Date.now();
@@ -516,7 +552,7 @@ class AuthService {
 
     return {
       success: true,
-      message: `Verification code sent to ${cleanPhone}. (Demo Code: ${code})`,
+      message: `SMS verification code sent to ${cleanPhone}. Please enter the 6-digit code received on your phone.`,
     };
   }
 
@@ -524,6 +560,47 @@ class AuthService {
     const cleanPhone = rawPhone.trim().replace(/[\s-]/g, '');
     const cleanCode = code.trim();
 
+    if (!cleanCode) {
+      throw new Error('Please enter the verification code.');
+    }
+
+    if (auth && this.phoneConfirmationResult) {
+      try {
+        const userCred = await this.phoneConfirmationResult.confirm(cleanCode);
+        const fbUser = userCred.user;
+        const profile: UserProfile = {
+          id: fbUser.uid,
+          phoneNumber: fbUser.phoneNumber || cleanPhone,
+          displayName: fbUser.displayName || `User ${cleanPhone.slice(-4)}`,
+          authProvider: 'phone',
+          role: 'user',
+          createdAt: Date.now(),
+        };
+
+        if (db) {
+          await setDoc(
+            doc(db, 'users', fbUser.uid),
+            {
+              phoneNumber: profile.phoneNumber,
+              displayName: profile.displayName,
+              role: profile.role,
+              updatedAt: Date.now(),
+            },
+            { merge: true }
+          ).catch((e) => console.warn('Firestore user write warning:', e));
+        }
+
+        this.phoneConfirmationResult = null;
+        this.currentUser = profile;
+        safeStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(profile));
+        this.notify();
+        return profile;
+      } catch (fbErr: any) {
+        throw new Error(formatFirebaseError(fbErr));
+      }
+    }
+
+    // Local Storage / Dev Testing Fallback Mode
     const otps: Record<string, StoredOtp> = JSON.parse(safeStorage.getItem(OTP_STORAGE_KEY) || '{}');
     const record = otps[cleanPhone];
     const now = Date.now();
@@ -587,6 +664,7 @@ class AuthService {
     if (auth) {
       firebaseSignOut(auth).catch((e) => console.warn('Firebase signout error:', e));
     }
+    this.phoneConfirmationResult = null;
     this.currentUser = null;
     safeStorage.removeItem(SESSION_STORAGE_KEY);
     this.notify();

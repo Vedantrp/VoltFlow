@@ -7,7 +7,10 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
   type Auth,
+  type ConfirmationResult,
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -68,6 +71,9 @@ export {
   signInWithPopup,
   firebaseSignOut,
   firebaseOnAuthStateChanged,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
   collection,
   doc,
   setDoc,
