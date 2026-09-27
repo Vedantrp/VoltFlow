@@ -1596,13 +1596,14 @@ const LEDRenderer: React.FC<{
         </circle>
       )}
 
-      {/* Metallic Wire Leads (Cathode Left: Straight, Anode Right: Bent Step, Tinkercad/Wokwi standard) */}
-      <line x1="15" y1="28" x2="15" y2="44" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M 25 28 L 25 34 L 27 38 L 25 44" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Metallic Wire Leads (Exact Tinkercad Geometry: Left Cathode Straight, Right Anode Bent Knee Leg) */}
+      {/* Cathode Left Lead */}
+      <path d="M 15 27 L 15 44" fill="none" stroke="#a3a3a3" strokeWidth="3" strokeLinecap="square" />
+      <path d="M 15 27 L 15 44" fill="none" stroke="#e5e5e5" strokeWidth="1" strokeLinecap="square" opacity="0.6" />
 
-      {/* Solder Connection Rings */}
-      <circle cx="15" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
-      <circle cx="25" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
+      {/* Anode Right Bent Lead */}
+      <path d="M 25 27 L 25 32 L 29 37 L 27 44" fill="none" stroke="#a3a3a3" strokeWidth="3" strokeLinecap="square" strokeLinejoin="round" />
+      <path d="M 25 27 L 25 32 L 29 37 L 27 44" fill="none" stroke="#e5e5e5" strokeWidth="1" strokeLinecap="square" strokeLinejoin="round" opacity="0.6" />
 
       {/* Base Flange Ring (With Cathode Flat Edge Notch on Left) */}
       <path

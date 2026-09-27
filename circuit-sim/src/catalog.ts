@@ -588,8 +588,8 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     estimatedCost: 0.029,
     footprint: 'LED-5MM',
     pins: [
-      { id: 'A', name: 'Anode', label: 'Anode (+)', x: 25, y: 42, position: { x: 25, y: 42 }, type: 'power', electricalType: 'passive', direction: 'in', side: 'bottom' },
-      { id: 'C', name: 'Cathode', label: 'Cathode (-)', x: 15, y: 42, position: { x: 15, y: 42 }, type: 'ground', electricalType: 'passive', direction: 'out', side: 'bottom' },
+      { id: 'A', name: 'Anode', label: 'Anode (+)', x: 27, y: 44, position: { x: 27, y: 44 }, type: 'power', electricalType: 'passive', direction: 'in', side: 'bottom' },
+      { id: 'C', name: 'Cathode', label: 'Cathode (-)', x: 15, y: 44, position: { x: 15, y: 44 }, type: 'ground', electricalType: 'passive', direction: 'out', side: 'bottom' },
     ],
   },
   {
