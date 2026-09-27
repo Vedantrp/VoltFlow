@@ -62,7 +62,24 @@ export const TinkercadComponentDrawer: React.FC<TinkercadComponentDrawerProps> =
       return true;
     }
 
-    return comp.category === selectedCategory;
+    if (comp.category === selectedCategory) return true;
+
+    // Category Aliases / Fallbacks for seamless component discovery
+    if (selectedCategory === 'Displays') {
+      return ['ssd1306', 'lcd1602', 'lcd1602-i2c', '7segment', '7segment-4digit', 'led', 'rgb-led', 'led-ring', 'neopixel-matrix', 'max7219'].includes(comp.type) ||
+        comp.name.toLowerCase().includes('display') || comp.name.toLowerCase().includes('oled') || comp.name.toLowerCase().includes('lcd') || comp.name.toLowerCase().includes('led');
+    }
+    if (selectedCategory === 'Passive') {
+      return comp.category === 'Basic' || ['resistor', 'potentiometer', 'capacitor-electrolytic', 'capacitor-ceramic', 'diode-1n4007', 'zener-diode', 'transistor-npn', 'inductor'].includes(comp.type);
+    }
+    if (selectedCategory === 'Input') {
+      return comp.category === 'Basic' || ['pushbutton', 'slide-switch', 'dip-switch-4', 'rotary-encoder', 'keypad-4x4', 'analog-joystick'].includes(comp.type);
+    }
+    if (selectedCategory === 'Actuators') {
+      return ['servo', 'stepper-motor', 'dc-motor', 'relay-5v', 'relay-5v-2ch', 'uln2003a', 'buzzer', 'piezo-buzzer'].includes(comp.type);
+    }
+
+    return false;
   });
 
   // Group by category sections when viewing All

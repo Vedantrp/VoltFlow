@@ -248,7 +248,42 @@ export class CircuitEvaluator {
           const anodeDriven = this.graph.hasDriver(`${comp.id}:A`);
           const cathodeDriven = this.graph.hasDriver(`${comp.id}:C`);
           const isLit = anodeVal === true && anodeDriven && cathodeVal === false && cathodeDriven;
-          updateState(comp.id, { ledOn: isLit });
+
+          // Check if connected to high-voltage direct power (e.g., 9V battery) without current-limiting resistor
+          let is9VDirect = false;
+          let seriesResistorValue: number | null = null;
+
+          for (const otherComp of components) {
+            if (otherComp.id === comp.id) continue;
+            if (otherComp.type === 'battery-9v') {
+              const connectedToAnode = this.graph.areConnected(`${comp.id}:A`, `${otherComp.id}:+`);
+              const connectedToCathode = this.graph.areConnected(`${comp.id}:C`, `${otherComp.id}:-`);
+              if (connectedToAnode && connectedToCathode) {
+                is9VDirect = true;
+              }
+            } else if (otherComp.type === 'resistor') {
+              const connectedToA = this.graph.areConnected(`${comp.id}:A`, `${otherComp.id}:1`) || this.graph.areConnected(`${comp.id}:A`, `${otherComp.id}:2`);
+              const connectedToC = this.graph.areConnected(`${comp.id}:C`, `${otherComp.id}:1`) || this.graph.areConnected(`${comp.id}:C`, `${otherComp.id}:2`);
+              if (connectedToA || connectedToC) {
+                seriesResistorValue = otherComp.props?.resistance ?? 220;
+              }
+            }
+          }
+
+          // Direct 9V connection without resistor (R < 50Ω) causes instant LED burnout
+          const isBurnedOut = is9VDirect && (!seriesResistorValue || seriesResistorValue < 50);
+
+          let brightness = 1.0;
+          if (isLit && seriesResistorValue !== null) {
+            // Brightness scales inversely with resistance: 220Ω -> 1.0 (100%), 1kΩ -> 0.22 (22%), 10kΩ -> 0.02
+            brightness = Math.min(1.0, Math.max(0.04, 220 / Math.max(1, seriesResistorValue)));
+          }
+
+          updateState(comp.id, {
+            ledOn: isLit && !isBurnedOut,
+            burnedOut: isBurnedOut || (comp.state?.burnedOut === true),
+            brightness: isLit && !isBurnedOut ? brightness : 0,
+          });
         } else if (comp.type === 'buzzer') {
           // Support all buzzer pin naming variants (+/-, POS/NEG, VCC/GND, 1/2, SIG/GND, IN/GND)
           const posVal =

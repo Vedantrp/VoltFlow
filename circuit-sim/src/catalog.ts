@@ -536,7 +536,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'ssd1306',
     name: 'OLED Display SSD1306 (128x64)',
-    category: 'Actuators',
+    category: 'Displays',
     description: 'Monochrome 0.96 inch I2C/SPI OLED display.',
     wokwiTag: 'wokwi-ssd1306',
     width: 150,
@@ -579,7 +579,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'led',
     name: 'LED (Red)',
-    category: 'Basic',
+    category: 'Displays',
     description: 'Standard 5mm Light Emitting Diode.',
     wokwiTag: 'wokwi-led',
     defaultProps: { color: 'red' },
@@ -595,7 +595,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
   {
     type: 'resistor',
     name: 'Resistor 220Ω',
-    category: 'Basic',
+    category: 'Passive',
     description: '220 Ohm resistor with axial leads.',
     wokwiTag: 'wokwi-resistor',
     defaultProps: { resistance: 220 },

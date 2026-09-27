@@ -62,6 +62,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           isRunning={isRunning}
           color={props?.color || 'red'}
           isOn={Boolean(isRunning && (state?.ledOn || props?.value))}
+          brightness={state?.brightness ?? props?.brightness ?? 1}
+          burnedOut={Boolean(state?.burnedOut || props?.burnedOut)}
         />
       );
 
@@ -1477,10 +1479,19 @@ const StepperMotorRenderer: React.FC<{
 // 7. 5MM DOMED LED (Exact Match to User Image 4 with Green Solder Rings)
 // Dimension: 40 × 50 px, Anode (25, 44), Cathode (15, 44)
 // ─────────────────────────────────────────────────────────────────────────────
-const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: string; isOn: boolean }> = ({
+const LEDRenderer: React.FC<{
+  isSelected: boolean;
+  isRunning: boolean;
+  color: string;
+  isOn: boolean;
+  brightness?: number;
+  burnedOut?: boolean;
+}> = ({
   isSelected,
   color,
   isOn,
+  brightness = 1,
+  burnedOut = false,
 }) => {
   const getPalette = () => {
     switch (color?.toLowerCase()) {
@@ -1524,9 +1535,9 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
         return {
           onCore: '#ffffff',
           onBody: '#ffffff',
-          onGlow: '#38bdf8',
-          offBody: '#475569',
-          offBase: '#0f172a',
+          onGlow: '#ffffff',
+          offBody: '#e2e8f0',
+          offBase: '#94a3b8',
           border: '#cbd5e1',
         };
       case 'red':
@@ -1543,6 +1554,9 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
   };
   const pal = getPalette();
 
+  const effectiveGlowRadius = 28 * (0.4 + 0.6 * brightness);
+  const glowOpacity = Math.min(1, 0.2 + 0.8 * brightness);
+
   return (
     <svg
       width="40"
@@ -1550,8 +1564,10 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
       viewBox="0 0 40 50"
       style={{
         overflow: 'visible',
-        filter: isOn
-          ? `drop-shadow(0 0 14px ${pal.onGlow}) drop-shadow(0 0 28px ${pal.onGlow}) drop-shadow(0 4px 8px rgba(0,0,0,0.5))`
+        filter: burnedOut
+          ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
+          : isOn
+          ? `drop-shadow(0 0 ${Math.max(4, 14 * brightness)}px ${pal.onGlow}) drop-shadow(0 0 ${Math.max(8, 28 * brightness)}px ${pal.onGlow}) drop-shadow(0 4px 8px rgba(0,0,0,0.5))`
           : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
       }}
     >
@@ -1559,8 +1575,8 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
         {/* Wokwi / Tinkercad Signature Multi-Stage Light Halo Bloom when ON */}
         <radialGradient id={`ledGlowAura-${color}-${isOn ? 'on' : 'off'}`} cx="50%" cy="38%" r="65%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="25%" stopColor={pal.onGlow} stopOpacity="0.95" />
-          <stop offset="60%" stopColor={pal.onGlow} stopOpacity="0.5" />
+          <stop offset="25%" stopColor={pal.onGlow} stopOpacity={0.95 * glowOpacity} />
+          <stop offset="60%" stopColor={pal.onGlow} stopOpacity={0.5 * glowOpacity} />
           <stop offset="100%" stopColor={pal.onGlow} stopOpacity="0" />
         </radialGradient>
 
@@ -1573,10 +1589,10 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
         </radialGradient>
       </defs>
 
-      {/* Outer Radial Light Halo (Pulsing bloom overlay when ON) */}
-      {isOn && (
-        <circle cx="20" cy="17" r="28" fill={`url(#ledGlowAura-${color}-on)`} style={{ pointerEvents: 'none' }}>
-          <animate attributeName="opacity" values="0.88;1;0.88" dur="1s" repeatCount="indefinite" />
+      {/* Outer Radial Light Halo (Pulsing bloom overlay when ON and not burned out) */}
+      {isOn && !burnedOut && (
+        <circle cx="20" cy="17" r={effectiveGlowRadius} fill={`url(#ledGlowAura-${color}-on)`} style={{ pointerEvents: 'none' }}>
+          <animate attributeName="opacity" values={`${glowOpacity * 0.88};${glowOpacity};${glowOpacity * 0.88}`} dur="1s" repeatCount="indefinite" />
         </circle>
       )}
 
@@ -1591,36 +1607,53 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
       {/* Base Flange Ring (With Cathode Flat Edge Notch on Left) */}
       <path
         d="M 10 26 L 10 29 Q 10 30.5 12.5 30.5 L 27.5 30.5 Q 30 30.5 30 29 L 30 26 Z"
-        fill={isOn ? pal.onBody : pal.offBase}
-        stroke={isOn ? pal.border : '#3f3f46'}
+        fill={burnedOut ? '#27272a' : isOn ? pal.onBody : pal.offBase}
+        stroke={burnedOut ? '#09090b' : isOn ? pal.border : '#3f3f46'}
         strokeWidth="0.8"
       />
 
       {/* Main 5mm Epoxy Dome Body */}
       <path
         d="M 11 26 C 11 7 29 7 29 26 Z"
-        fill={`url(#ledDomeGrad-${color}-${isOn ? 'on' : 'off'})`}
-        stroke={isOn ? pal.onGlow : '#52525b'}
-        strokeWidth={isOn ? 1.6 : 1}
+        fill={burnedOut ? '#27272a' : `url(#ledDomeGrad-${color}-${isOn ? 'on' : 'off'})`}
+        stroke={burnedOut ? '#18181b' : isOn ? pal.onGlow : '#52525b'}
+        strokeWidth={isOn && !burnedOut ? 1.6 : 1}
       />
 
       {/* Internal Leadframe (Cathode Anvil & Anode Post inside translucent epoxy) */}
-      <path d="M 15 26 L 15 19 L 18 16 L 18 26 Z" fill={isOn ? '#ffffff' : '#94a3b8'} opacity={isOn ? 0.95 : 0.6} />
-      <path d="M 24 26 L 24 15 L 26 15 L 26 26 Z" fill={isOn ? '#ffffff' : '#cbd5e1'} opacity={isOn ? 0.95 : 0.7} />
+      <path d="M 15 26 L 15 19 L 18 16 L 18 26 Z" fill={burnedOut ? '#09090b' : isOn ? '#ffffff' : '#94a3b8'} opacity={burnedOut ? 0.9 : isOn ? 0.95 : 0.6} />
+      <path d="M 24 26 L 24 15 L 26 15 L 26 26 Z" fill={burnedOut ? '#09090b' : isOn ? '#ffffff' : '#cbd5e1'} opacity={burnedOut ? 0.9 : isOn ? 0.95 : 0.7} />
 
       {/* Semiconductor White-Hot Die Core Spot */}
-      <circle cx="19.5" cy="17" r={isOn ? 3.2 : 1.3} fill={isOn ? '#ffffff' : '#f1f5f9'} opacity={isOn ? 1 : 0.85} />
-      {isOn && <circle cx="19.5" cy="17" r="5.5" fill="#ffffff" opacity="0.65" />}
+      {!burnedOut && (
+        <circle cx="19.5" cy="17" r={isOn ? 3.2 * brightness : 1.3} fill={isOn ? '#ffffff' : '#f1f5f9'} opacity={isOn ? 1 : 0.85} />
+      )}
+      {isOn && !burnedOut && <circle cx="19.5" cy="17" r={5.5 * brightness} fill="#ffffff" opacity={0.65 * brightness} />}
+
+      {/* Burned Out Over-Voltage Smoked Scorch & Explosion Symbol (💥) */}
+      {burnedOut && (
+        <g>
+          <circle cx="20" cy="18" r="7" fill="#09090b" opacity="0.85" />
+          <circle cx="20" cy="18" r="4" fill="#3f3f46" opacity="0.6" />
+          <path d="M 17 14 L 20 18 L 22 13" stroke="#71717a" strokeWidth="0.8" />
+          <path d="M 20 18 L 24 22" stroke="#71717a" strokeWidth="0.8" />
+          <text x="20" y="8" fontSize="13" textAnchor="middle" style={{ pointerEvents: 'none' }}>
+            💥
+          </text>
+        </g>
+      )}
 
       {/* Specular Top Glass Curve Reflection Highlight */}
-      <path
-        d="M 15 18 C 15 11 23 11 25 15"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth={isOn ? 2.2 : 1.5}
-        strokeLinecap="round"
-        opacity={isOn ? 0.98 : 0.65}
-      />
+      {!burnedOut && (
+        <path
+          d="M 15 18 C 15 11 23 11 25 15"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth={isOn ? 2.2 : 1.5}
+          strokeLinecap="round"
+          opacity={isOn ? 0.98 : 0.65}
+        />
+      )}
     </svg>
   );
 };
