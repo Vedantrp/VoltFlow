@@ -3,6 +3,8 @@
  * 3-pin PCB Breakout Module (VCC, DATA, GND) with built-in pull-up resistor & power LED
  * 64 × 128 px
  */
+import { LitElement, html, css } from 'lit';
+
 export class VoltFlowDHT11Element extends LitElement {
   static properties = {
     temperature: { type: Number },
