@@ -2,8 +2,9 @@
   "name": "circuit-sim-workspace",
   "private": true,
   "scripts": {
-    "start": "npm --prefix circuit-sim start",
-    "dev": "npm --prefix circuit-sim run dev",
-    "build": "npm --prefix circuit-sim run build"
+    "postinstall": "cd circuit-sim && npm install --include=dev",
+    "start": "cd circuit-sim && npm start",
+    "dev": "cd circuit-sim && npm run dev",
+    "build": "cd circuit-sim && npm install --include=dev && npm run build"
   }
 }

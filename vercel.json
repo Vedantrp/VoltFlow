@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "installCommand": "cd circuit-sim && npm install --include=dev",
   "buildCommand": "cd circuit-sim && npm run build",
   "outputDirectory": "circuit-sim/dist",
   "framework": "vite",
