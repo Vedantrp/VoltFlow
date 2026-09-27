@@ -170,13 +170,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {/* Header */}
         <div
           style={{
-            padding: '24px 24px 16px',
-            borderBottom: '1px solid #f1f5f9',
+            padding: '24px 24px 18px',
+            borderBottom: '1px solid #E2DACD',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            backgroundColor: '#0f172a',
-            color: '#ffffff',
+            backgroundColor: '#F7F4EE',
+            color: '#1F2321',
           }}
         >
           <div>
@@ -190,7 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 ? 'Phone Authentication'
                 : 'Sign in to VoltFlow'}
             </h2>
-            <p style={{ margin: '0 0 6px 0', fontSize: 12, color: '#94a3b8' }}>
+            <p style={{ margin: '4px 0 8px 0', fontSize: 12, color: '#4A524D' }}>
               Secure workspace with multi-tenant project isolation & autosave
             </p>
             <div
@@ -198,13 +198,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '3px 8px',
-                borderRadius: 4,
+                padding: '4px 10px',
+                borderRadius: 6,
                 fontSize: 11,
                 fontWeight: 600,
-                backgroundColor: authService.isFirebaseModeActive() ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                color: authService.isFirebaseModeActive() ? '#34d399' : '#fbbf24',
-                border: authService.isFirebaseModeActive() ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
+                backgroundColor: authService.isFirebaseModeActive() ? '#D1FAE5' : '#FEF3C7',
+                color: authService.isFirebaseModeActive() ? '#065F46' : '#92400E',
+                border: authService.isFirebaseModeActive() ? '1px solid #A7F3D0' : '1px solid #FDE68A',
               }}
             >
               {authService.isFirebaseModeActive()
@@ -217,12 +217,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             style={{
               background: 'none',
               border: 'none',
-              color: '#94a3b8',
+              color: '#4A524D',
               cursor: 'pointer',
-              padding: 4,
+              padding: 6,
               borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s, color 0.2s',
             }}
             aria-label="Close"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#EAE4D9';
+              e.currentTarget.style.color = '#1F2321';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#4A524D';
+            }}
           >
             <X size={20} />
           </button>
@@ -299,56 +311,59 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         ) : (
           <React.Fragment>
             {/* Auth Mode Tabs */}
-            <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-          <button
-            onClick={() => handleSwitchMode('signin')}
-            style={{
-              flex: 1,
-              padding: '12px 8px',
-              border: 'none',
-              backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
-              borderBottom: mode === 'signin' ? '2px solid #2563eb' : 'none',
-              fontWeight: mode === 'signin' ? 700 : 500,
-              color: mode === 'signin' ? '#2563eb' : '#64748b',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => handleSwitchMode('signup')}
-            style={{
-              flex: 1,
-              padding: '12px 8px',
-              border: 'none',
-              backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
-              borderBottom: mode === 'signup' ? '2px solid #2563eb' : 'none',
-              fontWeight: mode === 'signup' ? 700 : 500,
-              color: mode === 'signup' ? '#2563eb' : '#64748b',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            Create Account
-          </button>
-          <button
-            onClick={() => handleSwitchMode('phone')}
-            style={{
-              flex: 1,
-              padding: '12px 8px',
-              border: 'none',
-              backgroundColor: mode === 'phone' ? '#ffffff' : 'transparent',
-              borderBottom: mode === 'phone' ? '2px solid #2563eb' : 'none',
-              fontWeight: mode === 'phone' ? 700 : 500,
-              color: mode === 'phone' ? '#2563eb' : '#64748b',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            Phone OTP
-          </button>
-        </div>
+            <div style={{ display: 'flex', borderBottom: '1px solid #E2DACD', backgroundColor: '#FAF8F5' }}>
+              <button
+                onClick={() => handleSwitchMode('signin')}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  border: 'none',
+                  backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
+                  borderBottom: mode === 'signin' ? '2px solid #E98B5A' : 'none',
+                  fontWeight: mode === 'signin' ? 700 : 500,
+                  color: mode === 'signin' ? '#1F2321' : '#4A524D',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  transition: 'color 0.15s, background-color 0.15s',
+                }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => handleSwitchMode('signup')}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  border: 'none',
+                  backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
+                  borderBottom: mode === 'signup' ? '2px solid #E98B5A' : 'none',
+                  fontWeight: mode === 'signup' ? 700 : 500,
+                  color: mode === 'signup' ? '#1F2321' : '#4A524D',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  transition: 'color 0.15s, background-color 0.15s',
+                }}
+              >
+                Create Account
+              </button>
+              <button
+                onClick={() => handleSwitchMode('phone')}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  border: 'none',
+                  backgroundColor: mode === 'phone' ? '#ffffff' : 'transparent',
+                  borderBottom: mode === 'phone' ? '2px solid #E98B5A' : 'none',
+                  fontWeight: mode === 'phone' ? 700 : 500,
+                  color: mode === 'phone' ? '#1F2321' : '#4A524D',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  transition: 'color 0.15s, background-color 0.15s',
+                }}
+              >
+                Phone OTP
+              </button>
+            </div>
 
         {/* Form Body */}
         <div style={{ padding: 24 }}>
