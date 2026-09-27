@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Lock,
   Mail,
-  Phone,
   User,
   AlertCircle,
   CheckCircle2,
   Loader2,
-  ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -20,7 +18,7 @@ interface AuthModalProps {
   onSuccess: (user: UserProfile) => void;
 }
 
-type AuthMode = 'signin' | 'signup' | 'phone';
+type AuthMode = 'signin' | 'signup';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -29,27 +27,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
 
-  // Phone state
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-
   // Status state
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Cleanup reCAPTCHA verifier instance when modal closes or unmounts
-  React.useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined' && (window as any).recaptchaVerifier) {
-        try {
-          (window as any).recaptchaVerifier.clear();
-        } catch {}
-        (window as any).recaptchaVerifier = null;
-      }
-    };
-  }, []);
+  // Safety fallback: Ensure loading is never stuck for more than 4 seconds
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (loading) {
+      timer = setTimeout(() => {
+        setLoading(false);
+      }, 4000);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   if (!isOpen) return null;
 
@@ -62,9 +54,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setPassword('');
     setConfirmPassword('');
     setDisplayName('');
-    setPhoneNumber('');
-    setOtpCode('');
-    setOtpSent(false);
   };
 
   const handleSwitchMode = (newMode: AuthMode, preserveEmail = false) => {
@@ -90,14 +79,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         setTimeout(() => {
           onSuccess(user);
           onClose();
-        }, 500);
+        }, 300);
       } else {
         const user = await authService.signIn(email, password);
         setSuccessMsg('Welcome back!');
         setTimeout(() => {
           onSuccess(user);
           onClose();
-        }, 400);
+        }, 300);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Authentication failed. Please try again.');
@@ -115,45 +104,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setTimeout(() => {
         onSuccess(user);
         onClose();
-      }, 400);
+      }, 300);
     } catch (err: any) {
       setErrorMsg(err.message || 'Google sign in failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setLoading(true);
-
-    try {
-      const res = await authService.sendPhoneOtp(phoneNumber);
-      setOtpSent(true);
-      setSuccessMsg(res.message);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to send verification code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setLoading(true);
-
-    try {
-      const user = await authService.verifyPhoneOtp(phoneNumber, otpCode);
-      setSuccessMsg('Phone verified successfully!');
-      setTimeout(() => {
-        onSuccess(user);
-        onClose();
-      }, 400);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Verification failed.');
     } finally {
       setLoading(false);
     }
@@ -186,9 +139,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Permanent reCAPTCHA container element */}
-        <div id="recaptcha-container" style={{ display: 'none' }}></div>
-
         {/* Header */}
         <div
           style={{
@@ -206,11 +156,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <img src="/voltflow-logo.png" alt="VoltFlow Studio" style={{ height: 48, objectFit: 'contain' }} />
             </div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, fontFamily: "'Playfair Display', Georgia, serif", color: '#1F2321' }}>
-              {mode === 'signup'
-                ? 'Create VoltFlow Account'
-                : mode === 'phone'
-                ? 'Phone Authentication'
-                : 'Sign in to VoltFlow'}
+              {mode === 'signup' ? 'Create VoltFlow Account' : 'Sign in to VoltFlow'}
             </h2>
             <p style={{ margin: '4px 0 8px 0', fontSize: 12, color: '#4A524D' }}>
               Secure workspace with multi-tenant project isolation & autosave
@@ -279,153 +225,135 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         )}
 
         <React.Fragment>
-            {/* Auth Mode Tabs */}
-            <div style={{ display: 'flex', borderBottom: '1px solid #E2DACD', backgroundColor: '#FAF8F5' }}>
-              <button
-                onClick={() => handleSwitchMode('signin')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  border: 'none',
-                  backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
-                  borderBottom: mode === 'signin' ? '2px solid #E98B5A' : 'none',
-                  fontWeight: mode === 'signin' ? 700 : 500,
-                  color: mode === 'signin' ? '#1F2321' : '#4A524D',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  transition: 'color 0.15s, background-color 0.15s',
-                }}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => handleSwitchMode('signup')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  border: 'none',
-                  backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
-                  borderBottom: mode === 'signup' ? '2px solid #E98B5A' : 'none',
-                  fontWeight: mode === 'signup' ? 700 : 500,
-                  color: mode === 'signup' ? '#1F2321' : '#4A524D',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  transition: 'color 0.15s, background-color 0.15s',
-                }}
-              >
-                Create Account
-              </button>
-              <button
-                onClick={() => handleSwitchMode('phone')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  border: 'none',
-                  backgroundColor: mode === 'phone' ? '#ffffff' : 'transparent',
-                  borderBottom: mode === 'phone' ? '2px solid #E98B5A' : 'none',
-                  fontWeight: mode === 'phone' ? 700 : 500,
-                  color: mode === 'phone' ? '#1F2321' : '#4A524D',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  transition: 'color 0.15s, background-color 0.15s',
-                }}
-              >
-                Phone OTP
-              </button>
-            </div>
-
-        {/* Form Body */}
-        <div style={{ padding: 24 }}>
-          {/* Messages */}
-          {errorMsg && (
-            <div
+          {/* Auth Mode Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #E2DACD', backgroundColor: '#FAF8F5' }}>
+            <button
+              onClick={() => handleSwitchMode('signin')}
               style={{
-                marginBottom: 16,
-                padding: '10px 14px',
-                borderRadius: 8,
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#b91c1c',
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
+                borderBottom: mode === 'signin' ? '2px solid #E98B5A' : 'none',
+                fontWeight: mode === 'signin' ? 700 : 500,
+                color: mode === 'signin' ? '#1F2321' : '#4A524D',
                 fontSize: 13,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                flexWrap: 'wrap',
+                cursor: 'pointer',
+                transition: 'color 0.15s, background-color 0.15s',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                <span>{errorMsg}</span>
+              Sign In
+            </button>
+            <button
+              onClick={() => handleSwitchMode('signup')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
+                borderBottom: mode === 'signup' ? '2px solid #E98B5A' : 'none',
+                fontWeight: mode === 'signup' ? 700 : 500,
+                color: mode === 'signup' ? '#1F2321' : '#4A524D',
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'color 0.15s, background-color 0.15s',
+              }}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {/* Form Body */}
+          <div style={{ padding: 24 }}>
+            {/* Messages */}
+            {errorMsg && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>{errorMsg}</span>
+                </div>
+                {errorMsg.includes('already exists') && (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchMode('signin', true)}
+                    style={{
+                      backgroundColor: '#1F2321',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '5px 12px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    Switch to Sign In →
+                  </button>
+                )}
+                {errorMsg.includes('already signed in') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      authService.signOut();
+                      setErrorMsg(null);
+                      setSuccessMsg('Signed out of current session. You can now register or sign in with another account.');
+                    }}
+                    style={{
+                      backgroundColor: '#dc2626',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '5px 12px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Sign Out & Continue
+                  </button>
+                )}
               </div>
-              {errorMsg.includes('already exists') && (
-                <button
-                  type="button"
-                  onClick={() => handleSwitchMode('signin', true)}
-                  style={{
-                    backgroundColor: '#1F2321',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '5px 12px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  Switch to Sign In →
-                </button>
-              )}
-              {errorMsg.includes('already signed in') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    authService.signOut();
-                    setErrorMsg(null);
-                    setSuccessMsg('Signed out of current session. You can now register or sign in with another account.');
-                  }}
-                  style={{
-                    backgroundColor: '#dc2626',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '5px 12px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Sign Out & Continue
-                </button>
-              )}
-            </div>
-          )}
+            )}
 
-          {successMsg && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '10px 14px',
-                borderRadius: 8,
-                backgroundColor: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                color: '#15803d',
-                fontSize: 13,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
-              <span>{successMsg}</span>
-            </div>
-          )}
+            {successMsg && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#15803d',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
-          {/* Social Auth (Google) */}
-          {mode !== 'phone' && (
+            {/* Social Auth (Google) */}
             <div style={{ marginBottom: 20 }}>
               <button
                 type="button"
@@ -495,10 +423,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <div style={{ flex: 1, height: 1, backgroundColor: '#e2e8f0' }} />
               </div>
             </div>
-          )}
 
-          {/* Email Form */}
-          {mode !== 'phone' ? (
+            {/* Email Form */}
             <form onSubmit={handleSubmitEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {mode === 'signup' && (
                 <div>
@@ -631,158 +557,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 )}
               </button>
             </form>
-          ) : (
-            /* Phone OTP Form */
-            <div>
-              {/* Invisible Recaptcha Container for Firebase Phone Auth */}
-              <div id="recaptcha-container"></div>
-
-              <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#1E40AF', marginBottom: 14 }}>
-                ⚡ <strong>Instant Phone Auth:</strong> Enter any phone number (e.g. +91 9876543210 or +1 555-0199). If Firebase SMS billing is disabled, demo verification code is <strong>123456</strong>.
-              </div>
-
-              {!otpSent ? (
-                <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 4 }}>
-                      Phone Number (with Country Code)
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Phone size={16} color="#94a3b8" style={{ position: 'absolute', left: 12, top: 11 }} />
-                      <input
-                        type="tel"
-                        required
-                        placeholder="+1 555-0199 or +91 9876543210"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px 9px 36px',
-                          borderRadius: 8,
-                          border: '1px solid #cbd5e1',
-                          fontSize: 13,
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
-                    <span style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'block' }}>
-                      Enter your phone number in international format (e.g. +1 555-0199 or +91 9876543210).
-                    </span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '11px 16px',
-                      borderRadius: 8,
-                      border: 'none',
-                      backgroundColor: '#2563eb',
-                      color: '#ffffff',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>Sending Verification Code…</span>
-                      </>
-                    ) : (
-                      <>Send Verification Code <ArrowRight size={16} /></>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
-                        Enter 6-digit Code
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setOtpSent(false)}
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: 11, cursor: 'pointer' }}
-                      >
-                        Change Number
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      placeholder="••••••"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: 8,
-                        border: '1px solid #cbd5e1',
-                        fontSize: 16,
-                        textAlign: 'center',
-                        letterSpacing: '0.3em',
-                        fontWeight: 700,
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '11px 16px',
-                      borderRadius: 8,
-                      border: 'none',
-                      backgroundColor: '#10b981',
-                      color: '#ffffff',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>Verifying Code…</span>
-                      </>
-                    ) : (
-                      <>Verify & Access Projects <ShieldCheck size={16} /></>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={loading}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#64748b',
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Didn’t receive code? Resend
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
-      </React.Fragment>
+          </div>
+        </React.Fragment>
       </div>
     </div>
   );
