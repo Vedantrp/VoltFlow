@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Production build outputs
+dist
+dist-ssr
+build
+
+# Environment files - SECURE & NEVER COMMIT
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Server temp execution files
+server/tmp
+server/*.elf
+server/*.hex
+server/*.o
+
+# OS & Editor files
+.DS_Store
+*.pem
+.vscode/
+.clangd

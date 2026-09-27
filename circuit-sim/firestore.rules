@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Require explicit Firebase Custom Auth Claim for admin privileges
+    function isVerifiedAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    // User Profile Document - Strict Owner Access
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isVerifiedAdmin();
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId) || isVerifiedAdmin();
+
+      // User Projects Subcollection - Multi-Tenant Isolation
+      match /projects/{projectId} {
+        allow read, create, update, delete: if isOwner(userId) || isVerifiedAdmin();
+      }
+    }
+
+    // Public Read-Only Circuit Presets / Catalog
+    match /public_presets/{presetId} {
+      allow read: if true;
+      allow write: if isVerifiedAdmin();
+    }
+  }
+}

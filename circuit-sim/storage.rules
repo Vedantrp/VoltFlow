@@ -1,0 +1,40 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isVerifiedAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    function isSafeFileType() {
+      return request.resource.contentType.matches('application/json')
+          || request.resource.contentType.matches('image/.*')
+          || request.resource.contentType.matches('text/.*');
+    }
+
+    function isWithinSizeLimit() {
+      return request.resource.size < 10 * 1024 * 1024; // Max 10MB
+    }
+
+    // User-owned file uploads (schematics, export files, Gerber zips)
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isOwner(userId) || isVerifiedAdmin();
+      allow write: if isOwner(userId) && isSafeFileType() && isWithinSizeLimit();
+      allow delete: if isOwner(userId) || isVerifiedAdmin();
+    }
+
+    // Public asset read-only access
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isVerifiedAdmin();
+    }
+  }
+}
