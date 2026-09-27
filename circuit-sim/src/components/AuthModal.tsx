@@ -240,76 +240,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </button>
         </div>
 
-        {/* If user is ALREADY signed in: Block duplicate sign-up and offer session management */}
-        {authService.getCurrentUser() ? (
-          <div style={{ padding: '24px', textAlign: 'center' }}>
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                fontSize: 22,
-                fontWeight: 700,
-                margin: '0 auto 12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+        {/* Active Session Info Banner if signed in */}
+        {authService.getCurrentUser() && (
+          <div style={{ padding: '8px 24px', backgroundColor: '#F0FDF4', borderBottom: '1px solid #BBF7D0', fontSize: 12, color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Currently logged in as <strong>{authService.getCurrentUser()?.displayName || authService.getCurrentUser()?.email}</strong></span>
+            <button
+              onClick={() => {
+                authService.signOut();
+                resetForm();
               }}
+              style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
             >
-              {authService.getCurrentUser()?.displayName?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#0f172a' }}>
-              Already Signed In
-            </h3>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
-              You are currently authenticated as <strong>{authService.getCurrentUser()?.displayName}</strong> ({authService.getCurrentUser()?.email || authService.getCurrentUser()?.phoneNumber}).
-              <br />
-              <span style={{ color: '#ef4444', fontWeight: 600 }}>
-                You cannot register a new account while signed in.
-              </span>
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                onClick={onClose}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                Continue as {authService.getCurrentUser()?.displayName}
-              </button>
-              <button
-                onClick={() => {
-                  authService.signOut();
-                  resetForm();
-                }}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: '#fef2f2',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
-              >
-                Sign Out & Switch Account
-              </button>
-            </div>
+              Sign Out
+            </button>
           </div>
-        ) : (
-          <React.Fragment>
+        )}
+
+        <React.Fragment>
             {/* Auth Mode Tabs */}
             <div style={{ display: 'flex', borderBottom: '1px solid #E2DACD', backgroundColor: '#FAF8F5' }}>
               <button
@@ -380,11 +327,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 fontSize: 13,
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: 8,
+                flexWrap: 'wrap',
               }}
             >
-              <AlertCircle size={16} style={{ flexShrink: 0 }} />
-              <span>{errorMsg}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{errorMsg}</span>
+              </div>
+              {errorMsg.includes('already exists') && (
+                <button
+                  type="button"
+                  onClick={() => handleSwitchMode('signin')}
+                  style={{
+                    backgroundColor: '#1F2321',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Switch to Sign In
+                </button>
+              )}
+              {errorMsg.includes('already signed in') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    authService.signOut();
+                    setErrorMsg(null);
+                  }}
+                  style={{
+                    backgroundColor: '#dc2626',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Sign Out First
+                </button>
+              )}
             </div>
           )}
 
@@ -737,7 +727,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           )}
         </div>
       </React.Fragment>
-    )}
       </div>
     </div>
   );

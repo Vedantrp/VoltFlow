@@ -277,7 +277,7 @@ class AuthService {
     if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       throw new Error('Please enter a valid email address.');
     }
-    if (this.currentUser && this.currentUser.email !== cleanEmail) {
+    if (this.currentUser && this.currentUser.email && this.currentUser.email !== cleanEmail) {
       throw new Error(
         `You are already signed in as ${this.currentUser.displayName || this.currentUser.email}. Please sign out before registering a new account.`
       );
