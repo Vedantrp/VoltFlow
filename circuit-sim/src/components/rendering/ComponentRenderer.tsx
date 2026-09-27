@@ -2654,28 +2654,90 @@ const IRSensorRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = 
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LM35 Temperature Sensor TO-92 (30 × 60 px)
+// LM35 Precision Analog Temperature Sensor — TO-92 Package (50 × 85 px)
+// Exact 1:1 hardware match to user reference photo (N42KRD / LM35 / DZ)
 // ─────────────────────────────────────────────────────────────────────────────
 const LM35Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
   return (
-    <svg width="90" height="70" viewBox="0 0 90 70"
-      style={{ overflow: 'visible', filter: isSelected ? 'drop-shadow(0 0 12px rgba(56,189,248,0.8))' : 'drop-shadow(0 3px 8px rgba(0,0,0,0.4))' }}>
-      {/* TO-92 body */}
-      <path d="M 18 42 C 18 16 72 16 72 42 Z" fill="#18181b" stroke={isSelected ? '#38bdf8' : '#3f3f46'} strokeWidth="1.5" />
-      <rect x="18" y="38" width="54" height="8" rx="2" fill="#27272a" />
-      {/* LM35 label */}
-      <text x="45" y="32" fill="#94a3b8" fontSize="8" fontWeight="900" fontFamily="monospace" textAnchor="middle">LM35</text>
-      <text x="45" y="12" fill="#64748b" fontSize="5" fontWeight="700" textAnchor="middle">PRECISION TEMP</text>
-      {/* 3 pins */}
-      {[18, 45, 72].map((x, i) => (
-        <g key={i}>
-          <rect x={x - 2} y="46" width="4" height="20" rx="1.5" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="0.8" />
-        </g>
+    <svg
+      width="50"
+      height="85"
+      viewBox="0 0 50 85"
+      style={{
+        overflow: 'visible',
+        filter: isSelected
+          ? 'drop-shadow(0 0 14px rgba(56,189,248,0.85)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
+          : 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))',
+      }}
+    >
+      <defs>
+        {/* TO-92 Epoxy Molded Body Gradient */}
+        <linearGradient id="to92BodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3f3f46" />
+          <stop offset="35%" stopColor="#27272a" />
+          <stop offset="100%" stopColor="#18181b" />
+        </linearGradient>
+
+        {/* TO-92 Flat Front Face Sheen */}
+        <linearGradient id="to92FlatFace" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3b3b42" />
+          <stop offset="20%" stopColor="#27272a" />
+          <stop offset="80%" stopColor="#18181b" />
+          <stop offset="100%" stopColor="#09090b" />
+        </linearGradient>
+
+        {/* Tinned Lead Metallic Silver */}
+        <linearGradient id="to92LeadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f8fafc" />
+          <stop offset="40%" stopColor="#cbd5e1" />
+          <stop offset="85%" stopColor="#64748b" />
+          <stop offset="100%" stopColor="#475569" />
+        </linearGradient>
+      </defs>
+
+      {/* 1. TO-92 Back Semi-Cylindrical Rounded Dome Body */}
+      <path
+        d="M 9 16 C 9 3 41 3 41 16 L 41 36 C 41 41 37 44 25 44 C 13 44 9 41 9 36 Z"
+        fill="url(#to92BodyGrad)"
+        stroke={isSelected ? '#38bdf8' : '#3f3f46'}
+        strokeWidth="1.2"
+      />
+
+      {/* 2. TO-92 Flat Front Face */}
+      <path
+        d="M 9.5 14.5 L 40.5 14.5 Q 42.5 14.5 42.5 16.5 L 42.5 37.5 Q 42.5 40.5 40.5 40.5 L 9.5 40.5 Q 7.5 40.5 7.5 37.5 L 7.5 16.5 Q 7.5 14.5 9.5 14.5 Z"
+        fill="url(#to92FlatFace)"
+        stroke="#52525b"
+        strokeWidth="0.8"
+      />
+
+      {/* Top Bevel Highlight Rim */}
+      <line x1="11" y1="15.5" x2="39" y2="15.5" stroke="#71717a" strokeWidth="0.8" opacity="0.7" />
+
+      {/* 3. Laser Etched Markings (Exact Match to User Photo) */}
+      <text x="25" y="22" fill="#a1a1aa" fontSize="4" fontWeight="700" fontFamily="monospace" textAnchor="middle" letterSpacing="0.4">N42KRD</text>
+      <text x="25" y="30" fill="#ffffff" fontSize="7.5" fontWeight="950" fontFamily="monospace" textAnchor="middle" letterSpacing="0.8">LM35</text>
+      <text x="25" y="37" fill="#d4d4d8" fontSize="4.8" fontWeight="800" fontFamily="monospace" textAnchor="middle" letterSpacing="0.5">DZ</text>
+
+      {/* 4. Lead Entry Shoulders at Bottom */}
+      {[14, 25, 36].map((x) => (
+        <polygon key={x} points={`${x - 2.2},40 ${x + 2.2},40 ${x + 1.4},44 ${x - 1.4},44`} fill="#27272a" stroke="#3f3f46" strokeWidth="0.4" />
       ))}
-      {/* Pin labels */}
-      <text x="18" y="68" fill="#94a3b8" fontSize="5" fontWeight="700" textAnchor="middle">VCC</text>
-      <text x="45" y="68" fill="#94a3b8" fontSize="5" fontWeight="700" textAnchor="middle">OUT</text>
-      <text x="72" y="68" fill="#94a3b8" fontSize="5" fontWeight="700" textAnchor="middle">GND</text>
+
+      {/* 5. Three Tinned Metallic Leads */}
+      {[14, 25, 36].map((x) => (
+        <rect key={x} x={x - 1.2} y="44" width="2.4" height="30" rx="0.5" fill="url(#to92LeadGrad)" stroke="#475569" strokeWidth="0.4" />
+      ))}
+
+      {/* 6. Green Solder Connection Rings at Terminal Ends */}
+      {[14, 25, 36].map((x) => (
+        <circle key={x} cx={x} cy="74" r="2.8" fill="#22c55e" stroke="#16a34a" strokeWidth="0.8" />
+      ))}
+
+      {/* 7. Pin Terminal Labels */}
+      <text x="14" y="83" fill="#cbd5e1" fontSize="4.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">VCC</text>
+      <text x="25" y="83" fill="#38bdf8" fontSize="4.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">OUT</text>
+      <text x="36" y="83" fill="#cbd5e1" fontSize="4.5" fontWeight="900" fontFamily="monospace" textAnchor="middle">GND</text>
     </svg>
   );
 };
