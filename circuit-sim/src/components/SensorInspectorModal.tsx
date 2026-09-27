@@ -56,6 +56,81 @@ export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
         {name}
       </div>
 
+      {/* LED Color & State Inspector */}
+      {type === 'led' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, fontWeight: 600, color: '#cbd5e1' }}>
+            <span>LED Color:</span>
+            <span style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'capitalize' }}>
+              {props.color || 'red'}
+            </span>
+          </div>
+
+          {/* Color Selection Swatches */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+            {[
+              { id: 'red', name: 'Red', hex: '#ef4444' },
+              { id: 'green', name: 'Green', hex: '#22c55e' },
+              { id: 'blue', name: 'Blue', hex: '#3b82f6' },
+              { id: 'yellow', name: 'Yellow', hex: '#eab308' },
+              { id: 'orange', name: 'Orange', hex: '#f97316' },
+              { id: 'white', name: 'White', hex: '#f8fafc' },
+            ].map((c) => {
+              const active = (props.color || 'red').toLowerCase() === c.id;
+              return (
+                <button
+                  key={c.id}
+                  title={`Change LED color to ${c.name}`}
+                  onClick={() => onUpdateProps(id, { color: c.id })}
+                  style={{
+                    height: 32,
+                    borderRadius: 6,
+                    border: active ? `2px solid #ffffff` : '1px solid #475569',
+                    backgroundColor: c.hex,
+                    cursor: 'pointer',
+                    boxShadow: active ? `0 0 10px ${c.hex}` : 'none',
+                    transform: active ? 'scale(1.08)' : 'scale(1)',
+                    transition: 'all 0.15s ease',
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Quick Preset Buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {[
+              { id: 'red', label: '🔴 Red' },
+              { id: 'green', label: '🟢 Green' },
+              { id: 'blue', label: '🔵 Blue' },
+              { id: 'yellow', label: '🟡 Yellow' },
+              { id: 'orange', label: '🟠 Orange' },
+              { id: 'white', label: '⚪ White' },
+            ].map((item) => {
+              const active = (props.color || 'red').toLowerCase() === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onUpdateProps(id, { color: item.id })}
+                  style={{
+                    padding: '5px 6px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    borderRadius: 5,
+                    border: active ? '1px solid #38bdf8' : '1px solid #334155',
+                    backgroundColor: active ? '#0284c7' : '#0f172a',
+                    color: active ? '#ffffff' : '#cbd5e1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 0. Resistor Resistance Slider & Multi-Preset Inspector */}
       {type === 'resistor' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
