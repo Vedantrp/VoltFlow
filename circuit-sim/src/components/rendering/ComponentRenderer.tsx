@@ -1483,13 +1483,61 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
 }) => {
   const getPalette = () => {
     switch (color?.toLowerCase()) {
-      case 'green': return { main: '#22c55e', dark: '#15803d', glow: '#4ade80' };
-      case 'blue': return { main: '#3b82f6', dark: '#1d4ed8', glow: '#60a5fa' };
-      case 'yellow': return { main: '#eab308', dark: '#a16207', glow: '#fde047' };
-      case 'orange': return { main: '#f97316', dark: '#c2410c', glow: '#fb923c' };
-      case 'white': return { main: '#f8fafc', dark: '#94a3b8', glow: '#ffffff' };
+      case 'green':
+        return {
+          onCore: '#ffffff',
+          onBody: '#00ff66',
+          onGlow: '#00ff66',
+          offBody: '#083818',
+          offBase: '#041f0d',
+          border: '#00e65c',
+        };
+      case 'blue':
+        return {
+          onCore: '#ffffff',
+          onBody: '#00b7ff',
+          onGlow: '#00b7ff',
+          offBody: '#0d2448',
+          offBase: '#07152b',
+          border: '#00a2e8',
+        };
+      case 'yellow':
+        return {
+          onCore: '#ffffff',
+          onBody: '#ffee00',
+          onGlow: '#ffee00',
+          offBody: '#4a3a08',
+          offBase: '#292004',
+          border: '#e6d500',
+        };
+      case 'orange':
+        return {
+          onCore: '#ffffff',
+          onBody: '#ff6600',
+          onGlow: '#ff6600',
+          offBody: '#4c1d09',
+          offBase: '#2b1005',
+          border: '#ff5500',
+        };
+      case 'white':
+        return {
+          onCore: '#ffffff',
+          onBody: '#ffffff',
+          onGlow: '#38bdf8',
+          offBody: '#2b3648',
+          offBase: '#18202c',
+          border: '#e2e8f0',
+        };
       case 'red':
-      default: return { main: '#ef4444', dark: '#991b1b', glow: '#f87171' };
+      default:
+        return {
+          onCore: '#ffffff',
+          onBody: '#ff003c',
+          onGlow: '#ff003c',
+          offBody: '#500b10',
+          offBase: '#2c0609',
+          border: '#e60036',
+        };
     }
   };
   const pal = getPalette();
@@ -1502,45 +1550,75 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
       style={{
         overflow: 'visible',
         filter: isOn
-          ? `drop-shadow(0 0 20px ${pal.glow}) drop-shadow(0 4px 10px rgba(0,0,0,0.3))`
-          : 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+          ? `drop-shadow(0 0 14px ${pal.onGlow}) drop-shadow(0 0 28px ${pal.onGlow}) drop-shadow(0 4px 8px rgba(0,0,0,0.5))`
+          : 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
       }}
     >
+      <defs>
+        {/* Radial Light Aura Bloom when ON */}
+        <radialGradient id={`ledGlowAura-${color}-${isOn ? 'on' : 'off'}`} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="35%" stopColor={pal.onGlow} stopOpacity="0.85" />
+          <stop offset="70%" stopColor={pal.onGlow} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={pal.onGlow} stopOpacity="0" />
+        </radialGradient>
+
+        {/* 3D Epical Dome Shading */}
+        <radialGradient id={`ledDomeGrad-${color}-${isOn ? 'on' : 'off'}`} cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor={isOn ? '#ffffff' : '#94a3b8'} stopOpacity={isOn ? 0.95 : 0.4} />
+          <stop offset="30%" stopColor={isOn ? pal.onBody : pal.offBody} stopOpacity={isOn ? 0.95 : 0.9} />
+          <stop offset="85%" stopColor={isOn ? pal.onBody : pal.offBase} stopOpacity={1} />
+          <stop offset="100%" stopColor={isOn ? pal.border : '#0f172a'} stopOpacity={1} />
+        </radialGradient>
+      </defs>
+
+      {/* Outer Radial Light Halo (Visible when ON) */}
+      {isOn && (
+        <circle cx="20" cy="18" r="26" fill={`url(#ledGlowAura-${color}-on)`} style={{ pointerEvents: 'none' }}>
+          <animate attributeName="opacity" values="0.85;1;0.85" dur="1.2s" repeatCount="indefinite" />
+        </circle>
+      )}
+
       {/* Metallic Wire Leads */}
       <line x1="15" y1="28" x2="15" y2="44" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
       <path d="M 25 28 L 25 34 L 27 38 L 25 44" fill="none" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
 
-      {/* Bright Green Pin Connection Rings (Matching Image 4) */}
+      {/* Solder Connection Rings */}
       <circle cx="15" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
       <circle cx="25" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
 
-      {/* Translucent Colored Dome Body */}
+      {/* Base Flange Ring */}
       <path
-        d="M 11 26 L 11 29 Q 11 30 13 30 L 27 30 L 29 26 Z"
-        fill={pal.dark}
-        stroke="#475569"
+        d="M 10 26 L 10 29 Q 10 30.5 12.5 30.5 L 27.5 30.5 Q 30 30.5 30 29 L 30 26 Z"
+        fill={isOn ? pal.onBody : pal.offBase}
+        stroke={isOn ? pal.border : '#334155'}
         strokeWidth="0.8"
       />
+
+      {/* Main Translucent 5mm Epoxy Dome Body */}
       <path
-        d="M 12 26 C 12 8 28 8 28 26 Z"
-        fill={isOn ? pal.glow : pal.main}
-        fillOpacity={0.85}
-        stroke={pal.dark}
-        strokeWidth="1.2"
+        d="M 11 26 C 11 7 29 7 29 26 Z"
+        fill={`url(#ledDomeGrad-${color}-${isOn ? 'on' : 'off'})`}
+        stroke={isOn ? pal.onGlow : '#475569'}
+        strokeWidth={isOn ? 1.5 : 1}
       />
 
-      {/* Internal Lead Frame */}
-      <path d="M 16 26 L 16 20 L 19 17 L 19 26 Z" fill="#94a3b8" opacity="0.6" />
-      <path d="M 23 26 L 23 16 L 25 16 L 25 26 Z" fill="#cbd5e1" opacity="0.7" />
+      {/* Internal Anvil & Post Lead Frame (Visible when OFF or ON) */}
+      <path d="M 15 26 L 15 19 L 18 16 L 18 26 Z" fill={isOn ? '#ffffff' : '#94a3b8'} opacity={isOn ? 0.9 : 0.5} />
+      <path d="M 24 26 L 24 15 L 26 15 L 26 26 Z" fill={isOn ? '#ffffff' : '#cbd5e1'} opacity={isOn ? 0.9 : 0.6} />
 
-      {/* Specular Curved Highlight */}
+      {/* Semiconductor Die Spot (Glowing White Hot when ON) */}
+      <circle cx="19.5" cy="17" r={isOn ? 2.5 : 1.2} fill={isOn ? '#ffffff' : '#e2e8f0'} opacity={isOn ? 1 : 0.8} />
+      {isOn && <circle cx="19.5" cy="17" r="4.5" fill="#ffffff" opacity="0.6" />}
+
+      {/* Specular Curved Dome Glass Reflection Highlight */}
       <path
-        d="M 16 18 C 16 12 24 12 26 16"
+        d="M 15 18 C 15 11 23 11 25 15"
         fill="none"
         stroke="#ffffff"
-        strokeWidth="1.5"
+        strokeWidth={isOn ? 2 : 1.5}
         strokeLinecap="round"
-        opacity="0.85"
+        opacity={isOn ? 0.95 : 0.6}
       />
     </svg>
   );
