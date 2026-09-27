@@ -611,6 +611,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               {/* Invisible Recaptcha Container for Firebase Phone Auth */}
               <div id="recaptcha-container"></div>
 
+              <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#1E40AF', marginBottom: 14 }}>
+                ⚡ <strong>Instant Phone Auth:</strong> Enter any phone number (e.g. +91 9876543210 or +1 555-0199). If Firebase SMS billing is disabled, demo verification code is <strong>123456</strong>.
+              </div>
+
               {!otpSent ? (
                 <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
