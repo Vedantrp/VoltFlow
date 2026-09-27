@@ -1556,70 +1556,70 @@ const LEDRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; color: st
       }}
     >
       <defs>
-        {/* Radial Light Aura Bloom when ON */}
-        <radialGradient id={`ledGlowAura-${color}-${isOn ? 'on' : 'off'}`} cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-          <stop offset="35%" stopColor={pal.onGlow} stopOpacity="0.85" />
-          <stop offset="70%" stopColor={pal.onGlow} stopOpacity="0.4" />
+        {/* Wokwi / Tinkercad Signature Multi-Stage Light Halo Bloom when ON */}
+        <radialGradient id={`ledGlowAura-${color}-${isOn ? 'on' : 'off'}`} cx="50%" cy="38%" r="65%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="25%" stopColor={pal.onGlow} stopOpacity="0.95" />
+          <stop offset="60%" stopColor={pal.onGlow} stopOpacity="0.5" />
           <stop offset="100%" stopColor={pal.onGlow} stopOpacity="0" />
         </radialGradient>
 
-        {/* 3D Epical Dome Shading */}
-        <radialGradient id={`ledDomeGrad-${color}-${isOn ? 'on' : 'off'}`} cx="40%" cy="30%" r="70%">
-          <stop offset="0%" stopColor={isOn ? '#ffffff' : '#94a3b8'} stopOpacity={isOn ? 0.95 : 0.4} />
-          <stop offset="30%" stopColor={isOn ? pal.onBody : pal.offBody} stopOpacity={isOn ? 0.95 : 0.9} />
+        {/* 5mm Translucent Dome 3D Shading */}
+        <radialGradient id={`ledDomeGrad-${color}-${isOn ? 'on' : 'off'}`} cx="38%" cy="28%" r="72%">
+          <stop offset="0%" stopColor={isOn ? '#ffffff' : pal.border} stopOpacity={isOn ? 0.98 : 0.5} />
+          <stop offset="35%" stopColor={isOn ? pal.onBody : pal.offBody} stopOpacity={isOn ? 0.95 : 0.82} />
           <stop offset="85%" stopColor={isOn ? pal.onBody : pal.offBase} stopOpacity={1} />
-          <stop offset="100%" stopColor={isOn ? pal.border : '#0f172a'} stopOpacity={1} />
+          <stop offset="100%" stopColor={isOn ? pal.border : '#18181b'} stopOpacity={1} />
         </radialGradient>
       </defs>
 
-      {/* Outer Radial Light Halo (Visible when ON) */}
+      {/* Outer Radial Light Halo (Pulsing bloom overlay when ON) */}
       {isOn && (
-        <circle cx="20" cy="18" r="26" fill={`url(#ledGlowAura-${color}-on)`} style={{ pointerEvents: 'none' }}>
-          <animate attributeName="opacity" values="0.85;1;0.85" dur="1.2s" repeatCount="indefinite" />
+        <circle cx="20" cy="17" r="28" fill={`url(#ledGlowAura-${color}-on)`} style={{ pointerEvents: 'none' }}>
+          <animate attributeName="opacity" values="0.88;1;0.88" dur="1s" repeatCount="indefinite" />
         </circle>
       )}
 
-      {/* Metallic Wire Leads */}
-      <line x1="15" y1="28" x2="15" y2="44" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M 25 28 L 25 34 L 27 38 L 25 44" fill="none" stroke="#cbd5e1" strokeWidth="2.4" strokeLinecap="round" />
+      {/* Metallic Wire Leads (Cathode Left: Straight, Anode Right: Bent Step, Tinkercad/Wokwi standard) */}
+      <line x1="15" y1="28" x2="15" y2="44" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M 25 28 L 25 34 L 27 38 L 25 44" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" />
 
       {/* Solder Connection Rings */}
       <circle cx="15" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
       <circle cx="25" cy="44" r="3.2" fill="#22c55e" stroke="#16a34a" strokeWidth="1" />
 
-      {/* Base Flange Ring */}
+      {/* Base Flange Ring (With Cathode Flat Edge Notch on Left) */}
       <path
         d="M 10 26 L 10 29 Q 10 30.5 12.5 30.5 L 27.5 30.5 Q 30 30.5 30 29 L 30 26 Z"
         fill={isOn ? pal.onBody : pal.offBase}
-        stroke={isOn ? pal.border : '#334155'}
+        stroke={isOn ? pal.border : '#3f3f46'}
         strokeWidth="0.8"
       />
 
-      {/* Main Translucent 5mm Epoxy Dome Body */}
+      {/* Main 5mm Epoxy Dome Body */}
       <path
         d="M 11 26 C 11 7 29 7 29 26 Z"
         fill={`url(#ledDomeGrad-${color}-${isOn ? 'on' : 'off'})`}
-        stroke={isOn ? pal.onGlow : '#475569'}
-        strokeWidth={isOn ? 1.5 : 1}
+        stroke={isOn ? pal.onGlow : '#52525b'}
+        strokeWidth={isOn ? 1.6 : 1}
       />
 
-      {/* Internal Anvil & Post Lead Frame (Visible when OFF or ON) */}
-      <path d="M 15 26 L 15 19 L 18 16 L 18 26 Z" fill={isOn ? '#ffffff' : '#94a3b8'} opacity={isOn ? 0.9 : 0.5} />
-      <path d="M 24 26 L 24 15 L 26 15 L 26 26 Z" fill={isOn ? '#ffffff' : '#cbd5e1'} opacity={isOn ? 0.9 : 0.6} />
+      {/* Internal Leadframe (Cathode Anvil & Anode Post inside translucent epoxy) */}
+      <path d="M 15 26 L 15 19 L 18 16 L 18 26 Z" fill={isOn ? '#ffffff' : '#94a3b8'} opacity={isOn ? 0.95 : 0.6} />
+      <path d="M 24 26 L 24 15 L 26 15 L 26 26 Z" fill={isOn ? '#ffffff' : '#cbd5e1'} opacity={isOn ? 0.95 : 0.7} />
 
-      {/* Semiconductor Die Spot (Glowing White Hot when ON) */}
-      <circle cx="19.5" cy="17" r={isOn ? 2.5 : 1.2} fill={isOn ? '#ffffff' : '#e2e8f0'} opacity={isOn ? 1 : 0.8} />
-      {isOn && <circle cx="19.5" cy="17" r="4.5" fill="#ffffff" opacity="0.6" />}
+      {/* Semiconductor White-Hot Die Core Spot */}
+      <circle cx="19.5" cy="17" r={isOn ? 3.2 : 1.3} fill={isOn ? '#ffffff' : '#f1f5f9'} opacity={isOn ? 1 : 0.85} />
+      {isOn && <circle cx="19.5" cy="17" r="5.5" fill="#ffffff" opacity="0.65" />}
 
-      {/* Specular Curved Dome Glass Reflection Highlight */}
+      {/* Specular Top Glass Curve Reflection Highlight */}
       <path
         d="M 15 18 C 15 11 23 11 25 15"
         fill="none"
         stroke="#ffffff"
-        strokeWidth={isOn ? 2 : 1.5}
+        strokeWidth={isOn ? 2.2 : 1.5}
         strokeLinecap="round"
-        opacity={isOn ? 0.95 : 0.6}
+        opacity={isOn ? 0.98 : 0.65}
       />
     </svg>
   );
@@ -2788,18 +2788,15 @@ const UltrasonicPingRenderer: React.FC<{ isSelected: boolean; isRunning: boolean
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pure DHT11 Temperature & Humidity Sensor (57 × 117 px)
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// DHT11 3-Pin PCB Breakout Module (Exact Hardware Replica of User Image)
-// Dimension: 60 × 120 px
+// DHT11 Horizontal 3-Pin PCB Breakout Module (Exact Match to User Reference Photo)
+// Dimension: 120 × 60 px, Pins on Left: VCC (3, 16), OUT (3, 30), GND (3, 44)
 // ─────────────────────────────────────────────────────────────────────────────
 const DHT11Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
   return (
     <svg
-      width="60"
-      height="120"
-      viewBox="0 0 60 120"
+      width="120"
+      height="60"
+      viewBox="0 0 120 60"
       style={{
         overflow: 'visible',
         filter: isSelected
@@ -2809,100 +2806,86 @@ const DHT11Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
     >
       <defs>
         {/* PCB Matte Black Surface */}
-        <linearGradient id="dht11PcbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="dht11HoriPcb" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#1e1e1e" />
           <stop offset="50%" stopColor="#121212" />
           <stop offset="100%" stopColor="#0a0a0a" />
         </linearGradient>
 
         {/* Cyan Sensor Casing */}
-        <linearGradient id="dht11CyanCasing" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="dht11HoriCyan" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#38bdf8" />
           <stop offset="40%" stopColor="#0284c7" />
           <stop offset="100%" stopColor="#0369a1" />
         </linearGradient>
 
-        {/* Solder Joint Silver Metallic */}
-        <radialGradient id="dht11SolderPad" cx="35%" cy="35%" r="65%">
+        {/* Solder Pad Silver Metallic */}
+        <radialGradient id="dht11HoriSolder" cx="35%" cy="35%" r="65%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="40%" stopColor="#cbd5e1" />
           <stop offset="85%" stopColor="#64748b" />
           <stop offset="100%" stopColor="#334155" />
         </radialGradient>
 
-        {/* Male Header Pin Gold */}
-        <linearGradient id="dht11PinGold" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fef08a" />
+        {/* Male Pins Gold/Silver */}
+        <linearGradient id="dht11HoriPinGold" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#a16207" />
           <stop offset="50%" stopColor="#eab308" />
-          <stop offset="100%" stopColor="#a16207" />
+          <stop offset="100%" stopColor="#fef08a" />
         </linearGradient>
       </defs>
 
-      {/* 1. Main Black FR4 PCB Breakout Board */}
-      <rect x="2" y="2" width="56" height="116" rx="4" fill="url(#dht11PcbGrad)" stroke="#333333" strokeWidth="1" />
+      {/* 1. Male Connection Pins extending out to the LEFT */}
+      {[16, 30, 44].map((y, i) => (
+        <g key={i}>
+          <rect x="0" y={y - 1.2} width="16" height="2.4" rx="0.5" fill="url(#dht11HoriPinGold)" stroke="#854d0e" strokeWidth="0.4" />
+          <circle cx="3" cy={y} r="1.5" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.4" />
+        </g>
+      ))}
 
-      {/* White Silkscreen Perimeter Line */}
-      <rect x="4.5" y="4.5" width="51" height="111" rx="2.5" fill="none" stroke="#ffffff" strokeWidth="0.6" opacity="0.85" />
+      {/* 2. Plastic Header Socket Block on Left Edge */}
+      <rect x="15" y="8" width="9" height="44" rx="1.5" fill="#171717" stroke="#333333" strokeWidth="0.8" />
+      {[16, 30, 44].map((y) => (
+        <rect key={y} x="16.5" y={y - 2} width="6" height="4" rx="0.5" fill="#0a0a0a" stroke="#404040" strokeWidth="0.4" />
+      ))}
 
-      {/* 2. Top Mounted Cyan DHT11 Grid Sensor Unit */}
-      <rect x="7" y="8" width="46" height="58" rx="3.5" fill="url(#dht11CyanCasing)" stroke="#075985" strokeWidth="1.2" />
+      {/* 3. Main Black FR4 PCB Breakout Board */}
+      <rect x="22" y="2" width="96" height="56" rx="4" fill="url(#dht11HoriPcb)" stroke="#333333" strokeWidth="1" />
+      <rect x="24.5" y="4.5" width="91" height="51" rx="2.5" fill="none" stroke="#ffffff" strokeWidth="0.6" opacity="0.85" />
 
-      {/* 4x4 Grid Matrix of Vent Slots */}
+      {/* 4. Crisp White Silkscreen Terminal Labels next to pins */}
+      <text x="27" y="19" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">VCC</text>
+      <text x="27" y="33" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">OUT</text>
+      <text x="27" y="47" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">GND</text>
+
+      {/* 5. Center Metallic Circular Mounting Hole */}
+      <circle cx="49" cy="30" r="5" fill="#0a0a0a" stroke="#cbd5e1" strokeWidth="1.2" />
+      <circle cx="49" cy="30" r="3.5" fill="#050505" />
+
+      {/* 6. Four Soldered Connection Pads (Linking Casing to PCB) */}
+      {[13, 24, 36, 47].map((y, i) => (
+        <g key={i}>
+          <circle cx="61" cy={y} r="2.6" fill="url(#dht11HoriSolder)" stroke="#1e293b" strokeWidth="0.5" />
+          <circle cx="61" cy={y} r="0.9" fill="#0f172a" />
+        </g>
+      ))}
+
+      {/* 7. Right Mounted Cyan DHT11 Grid Sensor Unit */}
+      <rect x="66" y="7" width="48" height="46" rx="3.5" fill="url(#dht11HoriCyan)" stroke="#075985" strokeWidth="1.2" />
+
+      {/* 4x4 Matrix Grid of Square Ventilation Slots */}
       {[0, 1, 2, 3].map((row) =>
         [0, 1, 2, 3].map((col) => {
-          const x = 11.5 + col * 9.8;
-          const y = 12 + row * 10.5;
+          const x = 70.5 + col * 10.2;
+          const y = 11 + row * 9.5;
           return (
             <g key={`${row}-${col}`}>
-              <rect x={x} y={y} width="7.2" height="7.2" rx="1.2" fill="#0c4a6e" stroke="#0369a1" strokeWidth="0.6" />
-              <rect x={x + 0.8} y={y + 0.8} width="5.6" height="5.6" rx="0.8" fill="#042f2e" opacity="0.9" />
+              <rect x={x} y={y} width="7" height="6.8" rx="1.2" fill="#0c4a6e" stroke="#0369a1" strokeWidth="0.6" />
+              <rect x={x + 0.8} y={y + 0.8} width="5.4" height="5.2" rx="0.8" fill="#042f2e" opacity="0.9" />
             </g>
           );
         })
       )}
-
-      {/* Silkscreen DHT11 Branding on Sensor Housing */}
-      <rect x="12" y="52" width="36" height="11" rx="1.5" fill="#075985" stroke="#0284c7" strokeWidth="0.5" />
-      <text x="30" y="60" fill="#ffffff" fontSize="6.5" fontWeight="950" fontFamily="monospace" textAnchor="middle" letterSpacing="0.8">DHT11</text>
-
-      {/* 3. Four Solder Connection Pads (Connecting Casing to PCB) */}
-      {[13, 24, 36, 47].map((x, i) => (
-        <g key={i}>
-          <circle cx={x} cy="70" r="2.8" fill="url(#dht11SolderPad)" stroke="#1e293b" strokeWidth="0.6" />
-          <circle cx={x} cy="70" r="1" fill="#0f172a" />
-        </g>
-      ))}
-
-      {/* 4. Center Metallic Mounting Hole */}
-      <circle cx="30" cy="81" r="5" fill="#0a0a0a" stroke="#cbd5e1" strokeWidth="1.2" />
-      <circle cx="30" cy="81" r="3.5" fill="#050505" />
-
-      {/* 5. Onboard SMD Components (Resistor & Power LED) */}
-      <rect x="9" y="78" width="8" height="5" rx="0.8" fill="#121212" stroke="#475569" strokeWidth="0.4" />
-      <text x="13" y="81.8" fill="#cbd5e1" fontSize="3" fontWeight="800" fontFamily="monospace" textAnchor="middle">103</text>
-
-      {/* SMD Power LED (Red) */}
-      <rect x="43" y="78" width="7" height="5" rx="0.8" fill="#ef4444" stroke="#b91c1c" strokeWidth="0.4" />
-      <circle cx="46.5" cy="80.5" r="1.4" fill="#fca5a5" />
-
-      {/* 6. Silkscreen Terminal Labels */}
-      <text x="16" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">VCC</text>
-      <text x="30" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">OUT</text>
-      <text x="44" y="93" fill="#ffffff" fontSize="6" fontWeight="900" fontFamily="monospace" textAnchor="middle">GND</text>
-
-      {/* 7. Header Plastic Housing Block */}
-      <rect x="8" y="96" width="44" height="9" rx="1.5" fill="#171717" stroke="#333333" strokeWidth="0.8" />
-      {[16, 30, 44].map((x) => (
-        <rect key={x} x={x - 2} y="97.5" width="4" height="6" rx="0.5" fill="#0a0a0a" stroke="#404040" strokeWidth="0.4" />
-      ))}
-
-      {/* 8. Three Male Connection Pins */}
-      {[16, 30, 44].map((x, i) => (
-        <g key={i}>
-          <rect x={x - 1.2} y="103" width="2.4" height="15" rx="0.5" fill="url(#dht11PinGold)" stroke="#854d0e" strokeWidth="0.4" />
-          <circle cx={x} cy="117" r="1.5" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.4" />
-        </g>
-      ))}
     </svg>
   );
 };

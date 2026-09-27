@@ -112,68 +112,47 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
   if (type === 'dht11-sensor') {
     return (
       <div
-        aria-label="DHT11 temperature and humidity sensor"
+        aria-label="DHT11 temperature and humidity sensor breakout module"
         role="img"
-        style={{ position: 'relative', width: '100%', height: '100%', pointerEvents: 'none', userSelect: 'none' }}
+        style={{ position: 'relative', width: '100%', height: '100%', pointerEvents: 'none', userSelect: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            left: '14%',
-            right: '14%',
-            top: '7%',
-            bottom: '23%',
-            borderRadius: 6,
-            background: 'linear-gradient(135deg, #38bdf8 0%, #0e7490 55%, #155e75 100%)',
-            border: '2px solid #075985',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.36), 0 3px 6px rgba(2,132,199,0.3)',
-          }}
-        >
-          <div style={{ position: 'absolute', left: '12%', right: '12%', top: '15%', display: 'grid', gap: 3 }}>
-            {[0, 1, 2, 3, 4].map((slot) => (
-              <div key={slot} style={{ height: 2, borderRadius: 4, backgroundColor: 'rgba(8,47,73,0.62)' }} />
-            ))}
-          </div>
-          <span
-            style={{
-              position: 'absolute',
-              bottom: '12%',
-              width: '100%',
-              textAlign: 'center',
-              color: '#e0f2fe',
-              fontSize: 9,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontWeight: 900,
-              letterSpacing: 0.7,
-              textShadow: '0 1px 1px rgba(8,47,73,0.7)',
-            }}
-          >
-            DHT11
-          </span>
-        </div>
-        <div
-          style={{
-            position: 'absolute',
-            left: '14%',
-            right: '14%',
-            bottom: '6%',
-            height: '15%',
-            padding: '0 7%',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            alignItems: 'center',
-            backgroundColor: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: 3,
-          }}
-        >
-          {['VCC', 'DATA', 'GND'].map((pin) => (
-            <div key={pin} style={{ display: 'grid', justifyItems: 'center', gap: 1 }}>
-              <div style={terminalStyle} />
-              <span style={{ fontSize: 5, lineHeight: 1, color: '#cbd5e1', fontWeight: 800 }}>{pin}</span>
-            </div>
+        <svg viewBox="0 0 120 60" style={{ width: '92%', height: '92%', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id="mvDhtPcb" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e1e1e" />
+              <stop offset="50%" stopColor="#121212" />
+              <stop offset="100%" stopColor="#0a0a0a" />
+            </linearGradient>
+            <linearGradient id="mvDhtCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8" />
+              <stop offset="40%" stopColor="#0284c7" />
+              <stop offset="100%" stopColor="#0369a1" />
+            </linearGradient>
+          </defs>
+          {[16, 30, 44].map((y, i) => (
+            <rect key={i} x="0" y={y - 1.2} width="16" height="2.4" rx="0.5" fill="#eab308" stroke="#854d0e" strokeWidth="0.4" />
           ))}
-        </div>
+          <rect x="15" y="8" width="9" height="44" rx="1.5" fill="#171717" stroke="#333333" strokeWidth="0.8" />
+          <rect x="22" y="2" width="96" height="56" rx="4" fill="url(#mvDhtPcb)" stroke="#333333" strokeWidth="1" />
+          <rect x="24.5" y="4.5" width="91" height="51" rx="2.5" fill="none" stroke="#ffffff" strokeWidth="0.6" opacity="0.85" />
+          <text x="27" y="19" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">VCC</text>
+          <text x="27" y="33" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">OUT</text>
+          <text x="27" y="47" fill="#ffffff" fontSize="6.5" fontWeight="900" fontFamily="monospace" textAnchor="start">GND</text>
+          <circle cx="49" cy="30" r="4.5" fill="#0a0a0a" stroke="#cbd5e1" strokeWidth="1.2" />
+          {[13, 24, 36, 47].map((y, i) => (
+            <circle key={i} cx="61" cy={y} r="2.4" fill="#cbd5e1" stroke="#334155" strokeWidth="0.5" />
+          ))}
+          <rect x="66" y="7" width="48" height="46" rx="3.5" fill="url(#mvDhtCyan)" stroke="#075985" strokeWidth="1.2" />
+          {[0, 1, 2, 3].map((row) =>
+            [0, 1, 2, 3].map((col) => {
+              const x = 70.5 + col * 10.2;
+              const y = 11 + row * 9.5;
+              return (
+                <rect key={`${row}-${col}`} x={x} y={y} width="6.8" height="6.5" rx="1.2" fill="#0c4a6e" stroke="#0369a1" strokeWidth="0.5" />
+              );
+            })
+          )}
+        </svg>
       </div>
     );
   }
