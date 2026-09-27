@@ -53,10 +53,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   if (!isOpen) return null;
 
-  const resetForm = () => {
+  const resetForm = (keepEmail = false) => {
+    const currentEmail = email;
     setErrorMsg(null);
     setSuccessMsg(null);
-    setEmail('');
+    if (!keepEmail) setEmail('');
+    else setEmail(currentEmail);
     setPassword('');
     setConfirmPassword('');
     setDisplayName('');
@@ -65,9 +67,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setOtpSent(false);
   };
 
-  const handleSwitchMode = (newMode: AuthMode) => {
-    resetForm();
+  const handleSwitchMode = (newMode: AuthMode, preserveEmail = false) => {
+    const savedEmail = email;
+    resetForm(preserveEmail);
     setMode(newMode);
+    if (preserveEmail && savedEmail) {
+      setEmail(savedEmail);
+      setSuccessMsg(`Switched to ${newMode === 'signin' ? 'Sign In' : 'Create Account'} mode for ${savedEmail}.`);
+    }
   };
 
   const handleSubmitEmailAuth = async (e: React.FormEvent) => {
@@ -354,19 +361,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               {errorMsg.includes('already exists') && (
                 <button
                   type="button"
-                  onClick={() => handleSwitchMode('signin')}
+                  onClick={() => handleSwitchMode('signin', true)}
                   style={{
                     backgroundColor: '#1F2321',
                     color: '#FFFFFF',
                     border: 'none',
                     borderRadius: 6,
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
-                  Switch to Sign In
+                  Switch to Sign In →
                 </button>
               )}
               {errorMsg.includes('already signed in') && (
@@ -375,19 +385,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   onClick={() => {
                     authService.signOut();
                     setErrorMsg(null);
+                    setSuccessMsg('Signed out of current session. You can now register or sign in with another account.');
                   }}
                   style={{
                     backgroundColor: '#dc2626',
                     color: '#FFFFFF',
                     border: 'none',
                     borderRadius: 6,
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
                 >
-                  Sign Out First
+                  Sign Out & Continue
                 </button>
               )}
             </div>
