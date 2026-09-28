@@ -194,7 +194,6 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
 export function hasCustom2DRenderer(type: string): boolean {
   return [
-    'arduino-uno',
     'arduino-nano',
     'nodemcu-esp8266',
     'pir-sensor',

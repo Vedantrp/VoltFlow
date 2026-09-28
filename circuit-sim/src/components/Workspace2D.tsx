@@ -118,15 +118,18 @@ function getWokwiProps(comp: PlacedComponent, isRunning: boolean): Record<string
   const { type, props = {}, state = {} } = comp;
 
   switch (type) {
-    case 'arduino-uno':
+    case 'arduino-uno': {
+      const isL13On = Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13 || props.pin13));
       return {
         ...props,
         ...state,
-        led13: Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13 || props.pin13)),
+        led13: isL13On,
+        'led-13': isL13On,
         ledPower: isRunning,
         ledRX: Boolean(isRunning && state.rx),
         ledTX: Boolean(isRunning && state.tx),
       };
+    }
 
     case 'arduino-nano':
       return {
