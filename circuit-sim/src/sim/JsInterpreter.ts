@@ -443,6 +443,9 @@ export class JsInterpreter {
       this.evaluateLcdWrites();
     }
 
+    // 5e. Evaluate Serial control blocks (e.g. Serial.available() -> Serial.read() -> digitalWrite / Serial.print)
+    this.evaluateSerialAndControlBlocks();
+
     // 6. Serial output on tick 1 and every 4 ticks
     if (this.loopCount === 1 || this.loopCount % 4 === 0) {
       this.emitSerial();
@@ -452,6 +455,68 @@ export class JsInterpreter {
       this.timerId = setTimeout(this.tick, 50) as unknown as number;
     }
   };
+
+  private evaluateSerialAndControlBlocks() {
+    if (!this.code.includes('Serial.available') && !this.code.includes('Serial.read')) return;
+
+    const availIfMatch = /if\s*\(\s*Serial\.available\s*\(\s*\)\s*\)\s*\{([\s\S]*)\}/.exec(this.code);
+    if (!availIfMatch) return;
+
+    const blockContent = availIfMatch[1];
+    if (this.serialRxBuffer.length === 0) return;
+
+    // 1. Process Serial.read() assignment e.g. int c = Serial.read();
+    const srMatch = /(?:(?:const\s+)?(?:int|char|byte|uint8_t|short|long)\s+)?([A-Za-z0-9_]+)\s*=\s*Serial\.read\s*\(\s*\)/.exec(blockContent);
+    let varName = 'c';
+    if (srMatch) {
+      varName = srMatch[1];
+    }
+
+    const charCode = this.serialRxBuffer.charCodeAt(0);
+    this.varMap.set(varName, charCode);
+
+    // Consume 1 byte from serial buffer
+    this.serialRxBuffer = this.serialRxBuffer.slice(1);
+
+    // 2. Parse inner if (cond) { thenBlock } else { elseBlock }
+    const innerIfMatch = /if\s*\(([^)]+)\)\s*\{([\s\S]*?)\}(?:\s*else\s*\{([\s\S]*?)\})?/.exec(blockContent);
+    if (innerIfMatch) {
+      const conditionStr = innerIfMatch[1];
+      const thenBlock = innerIfMatch[2] || '';
+      const elseBlock = innerIfMatch[3] || '';
+
+      const condVal = this.evalCondition(conditionStr);
+      const activeBlock = condVal === true ? thenBlock : condVal === false ? elseBlock : null;
+
+      if (activeBlock) {
+        // Execute digitalWrite inside active block
+        const dwMatch = /digitalWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)/.exec(activeBlock);
+        if (dwMatch) {
+          const pin = this.resolvePin(dwMatch[1]);
+          const valStr = dwMatch[2].trim();
+          const isHigh = valStr === 'HIGH' || valStr === '1' || valStr === 'true';
+          this.hooks.onDigitalWrite(pin, isHigh);
+        }
+
+        // Execute Serial.println / Serial.print inside active block
+        const spMatch = /Serial\.(print(?:ln)?)\s*\(\s*([^)]+)\)/.exec(activeBlock);
+        if (spMatch) {
+          const isLn = spMatch[1] === 'println';
+          const rawArg = spMatch[2].trim();
+          let printText = '';
+          if ((rawArg.startsWith('"') && rawArg.endsWith('"')) || (rawArg.startsWith("'") && rawArg.endsWith("'"))) {
+            printText = rawArg.slice(1, -1);
+          } else if (this.varMap.has(rawArg)) {
+            const v = this.varMap.get(rawArg)!;
+            printText = String(v >= 32 && v <= 126 ? String.fromCharCode(v) : v);
+          } else {
+            printText = rawArg;
+          }
+          this.hooks.onSerialPrint(printText + (isLn ? '\n' : ''));
+        }
+      }
+    }
+  }
 
   private evalMathExpr(expr: string): number | null {
     let sanitized = expr.trim();
@@ -486,7 +551,7 @@ export class JsInterpreter {
     sanitized = sanitized.replace(/\((?:float|int|double|long|uint8_t|byte)\)/g, '');
     try {
       // Safe arithmetic evaluator restricted to mathematical expressions
-      if (/^[0-9.\s+\-*/%()Math.,eE><=!&|]+$/.test(sanitized)) {
+      if (/^[0-9.\s+\-*/%()Math.,eE><=!&|-]+$/.test(sanitized)) {
         const result = Function(`"use strict"; return (${sanitized});`)();
         if (typeof result === 'number' && !isNaN(result)) return result;
       }
@@ -546,8 +611,9 @@ export class JsInterpreter {
       return String(this.serialRxBuffer.length);
     });
 
-    // 2. Resolve char literals e.g. '1' -> 49, 'a' -> 97, '0' -> 48
-    c = c.replace(/'([^'\\]|\\.)'/g, (_, charStr) => {
+    // 2. Resolve char literals e.g. '1' or "1" -> 49, 'a' -> 97, '0' -> 48
+    c = c.replace(/(?:'([^'\\]|\\.)'|"([^"\\]|\\.)")/g, (_, s1, s2) => {
+      const charStr = s1 || s2;
       if (charStr === '\\n') return '10';
       if (charStr === '\\r') return '13';
       if (charStr === '\\0') return '0';
