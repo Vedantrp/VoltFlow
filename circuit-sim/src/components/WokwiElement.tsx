@@ -28,7 +28,13 @@ export function WokwiElement<T extends HTMLElement>({
     for (const [key, value] of Object.entries(props)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (el as any)[key] = value;
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      if (typeof value === 'boolean') {
+        if (value) {
+          el.setAttribute(key, '');
+        } else {
+          el.removeAttribute(key);
+        }
+      } else if (typeof value === 'string' || typeof value === 'number') {
         el.setAttribute(key, String(value));
       }
     }

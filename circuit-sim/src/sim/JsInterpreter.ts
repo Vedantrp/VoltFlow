@@ -341,6 +341,19 @@ export class JsInterpreter {
       }
     }
 
+    // 3b. Extract Serial.read() variables
+    const srRe = /(?:(?:const\s+)?(?:int|char|byte|uint8_t|short|long)\s+)?([A-Za-z0-9_]+)\s*=\s*Serial\.read\s*\(\s*\)/g;
+    let sr;
+    while ((sr = srRe.exec(this.code)) !== null) {
+      const varName = sr[1];
+      if (this.serialRxBuffer.length > 0) {
+        const charCode = this.serialRxBuffer.charCodeAt(0);
+        this.varMap.set(varName, charCode);
+      } else {
+        this.varMap.set(varName, -1);
+      }
+    }
+
     // 4. Process all digitalWrite calls
     const dwRe = /digitalWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)/g;
     const pinWrites = new Map<number, string[]>();
@@ -352,21 +365,26 @@ export class JsInterpreter {
       pinWrites.get(pin)!.push(expr);
     }
 
+    const hasConditionalBranches = this.code.includes('if') || this.code.includes('switch');
+
     for (const [pin, writes] of pinWrites.entries()) {
       let isHigh: boolean;
-      if (writes.length >= 2) {
+      if (writes.length >= 2 && !hasConditionalBranches) {
         const delays = Array.from(this.code.matchAll(/delay\s*\(\s*(\d+)\s*\)/g)).map(x => parseInt(x[1], 10));
         const hi = delays[0] || 1000;
         const lo = delays[1] ?? delays[0] ?? 1000;
         isHigh = (elapsed % (hi + lo)) < hi;
       } else {
-        const expr = writes[0];
-        if      (expr === 'HIGH' || expr === '1' || expr === 'true')  isHigh = true;
-        else if (expr === 'LOW'  || expr === '0' || expr === 'false') isHigh = false;
-        else if (this.varMap.has(expr)) isHigh = this.varMap.get(expr)! !== 0;
-        else isHigh = false;
         const cond = this.resolveConditionalWrite(pin);
-        if (cond !== null) isHigh = cond;
+        if (cond !== null) {
+          isHigh = cond;
+        } else {
+          const expr = writes[0];
+          if      (expr === 'HIGH' || expr === '1' || expr === 'true')  isHigh = true;
+          else if (expr === 'LOW'  || expr === '0' || expr === 'false') isHigh = false;
+          else if (this.varMap.has(expr)) isHigh = this.varMap.get(expr)! !== 0;
+          else isHigh = false;
+        }
       }
       this.hooks.onDigitalWrite(pin, isHigh);
     }
@@ -479,7 +497,7 @@ export class JsInterpreter {
   }
 
   private resolveConditionalWrite(pinNum: number): boolean | null {
-    const ifRe = /if\s*\(([^)]+)\)\s*\{([^}]*)\}(?:\s*else\s*(?:if\s*\([^)]+\)\s*)?\{([^}]*)\})?/g;
+    const ifRe = /if\s*\(([^)]+)\)\s*\{([\s\S]*?)\}(?:\s*else\s*(?:if\s*\([^)]+\)\s*)?\{([\s\S]*?)\})?/g;
     let m;
     while ((m = ifRe.exec(this.code)) !== null) {
       const condition = m[1];
@@ -522,14 +540,28 @@ export class JsInterpreter {
 
   private evalCondition(cond: string): boolean | null {
     let c = cond.trim();
-    // Resolve analogRead calls in condition
+
+    // 1. Resolve Serial.available()
+    c = c.replace(/Serial\.available\s*\(\s*\)/g, () => {
+      return String(this.serialRxBuffer.length);
+    });
+
+    // 2. Resolve char literals e.g. '1' -> 49, 'a' -> 97, '0' -> 48
+    c = c.replace(/'([^'\\]|\\.)'/g, (_, charStr) => {
+      if (charStr === '\\n') return '10';
+      if (charStr === '\\r') return '13';
+      if (charStr === '\\0') return '0';
+      return String(charStr.charCodeAt(0));
+    });
+
+    // 3. Resolve analogRead calls in condition
     c = c.replace(/analogRead\s*\(\s*([A-Za-z0-9_]+)\s*\)/g, (_, p) => {
       const pin = this.resolvePin(p);
       const idx = pin > 13 ? pin - 14 : pin;
       return String(this.hooks.onAnalogRead(idx));
     });
 
-    // Resolve digitalRead calls in condition
+    // 4. Resolve digitalRead calls in condition
     c = c.replace(/digitalRead\s*\(\s*([A-Za-z0-9_]+)\s*\)/g, (_, p) => {
       const pin = this.resolvePin(p);
       return this.hooks.onDigitalRead(pin) ? '1' : '0';
@@ -537,7 +569,7 @@ export class JsInterpreter {
 
     c = c.replace(/\bHIGH\b/g, '1').replace(/\bLOW\b/g, '0');
 
-    // Replace variables with their values
+    // 5. Replace variables with their values
     const sortedKeys = Array.from(this.varMap.keys()).sort((a, b) => b.length - a.length);
     for (const key of sortedKeys) {
       if (key === 'HIGH' || key === 'LOW') continue;
@@ -548,7 +580,7 @@ export class JsInterpreter {
 
     // Evaluate logical condition safely
     try {
-      if (/^[0-9.\s+\-*/%()><=!&|]+$/.test(c)) {
+      if (/^[0-9.\s+\-*/%()><=!&|-]+$/.test(c)) {
         const result = Function(`"use strict"; return Boolean(${c});`)();
         return typeof result === 'boolean' ? result : null;
       }

@@ -244,6 +244,8 @@ export class CircuitEvaluator {
       [`pin_${cleanPin}`]: isHigh,
       pin13: isPin13 ? isHigh : (currentState.pin13 ?? false),
       led13: isPin13 ? isHigh : (currentState.led13 ?? false),
+      pin_13: isPin13 ? isHigh : (currentState.pin_13 ?? false),
+      pin_D13: isPin13 ? isHigh : (currentState.pin_D13 ?? false),
       pin2: isPin2 ? isHigh : (currentState.pin2 ?? false),
       led2: isPin2 ? isHigh : (currentState.led2 ?? false),
       pinD4: isPinD4 ? isHigh : (currentState.pinD4 ?? false),
