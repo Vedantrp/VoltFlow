@@ -16,6 +16,7 @@ interface Props {
   compileError: string | null;
   serialText: string;
   onClearSerial: () => void;
+  onSendSerialInput?: (input: string) => void;
 }
 
 export function DraggableCodeWindow({
@@ -30,6 +31,7 @@ export function DraggableCodeWindow({
   compileError,
   serialText,
   onClearSerial,
+  onSendSerialInput,
 }: Props) {
   const [position, setPosition] = useState({ x: Math.max(20, window.innerWidth - 500), y: 70 });
   const [size, setSize] = useState({ width: 480, height: 560 });
@@ -313,6 +315,7 @@ export function DraggableCodeWindow({
           <SerialMonitor
             text={serialText}
             onClear={onClearSerial}
+            onSendInput={onSendSerialInput}
             height={serialHeight}
             onSplitterMouseDown={handleSerialResizeMouseDown}
             isCollapsed={isSerialCollapsed}

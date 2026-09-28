@@ -140,6 +140,16 @@ export class AvrRunner {
   stop() {
     this.stopped = true;
   }
+
+  sendSerialByte(byte: number) {
+    this.usart.writeByte(byte);
+  }
+
+  sendSerialString(str: string) {
+    for (let i = 0; i < str.length; i++) {
+      this.usart.writeByte(str.charCodeAt(i));
+    }
+  }
 }
 
 export { pinToPortBit };

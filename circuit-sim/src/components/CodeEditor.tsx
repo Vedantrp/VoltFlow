@@ -250,13 +250,13 @@ export function CodeEditor({
 
   return (
     <div className="code-editor-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1, overflow: 'hidden', padding: 8 }}>
-      <div className="code-editor-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="code-editor-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, paddingBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <button
             className="clean-btn clean-btn-success"
             onClick={onCompileRun}
             disabled={isCompiling}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30 }}
           >
             {isCompiling ? (
               <RefreshCw size={14} className="spin" />
@@ -268,7 +268,7 @@ export function CodeEditor({
             {isCompiling ? 'Compiling…' : isRunning ? 'Recompile' : 'Run Code'}
           </button>
           {isRunning && (
-            <button className="clean-btn clean-btn-danger" onClick={onStop} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <button className="clean-btn clean-btn-danger" onClick={onStop} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 30 }}>
               <Square size={14} fill="#ffffff" /> Stop
             </button>
           )}
@@ -280,14 +280,17 @@ export function CodeEditor({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 5,
               fontSize: 11,
-              padding: '4px 8px',
+              fontWeight: 600,
+              padding: '0 10px',
+              height: 30,
               borderRadius: 6,
               backgroundColor: forceSimpleMode ? '#3f3f46' : '#27272a',
               border: '1px solid #52525b',
               color: forceSimpleMode ? '#38bdf8' : '#a1a1aa',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
             {forceSimpleMode ? <Zap size={12} fill="#38bdf8" /> : <Code size={12} />}
@@ -295,7 +298,7 @@ export function CodeEditor({
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end', minWidth: 200 }}>
           {/* Quick Library Include Selector */}
           <select
             onChange={(e) => {
@@ -308,14 +311,17 @@ export function CodeEditor({
             style={{
               fontSize: 11,
               fontWeight: 600,
-              padding: '4px 6px',
+              height: 30,
+              padding: '0 8px',
               borderRadius: 6,
               backgroundColor: '#18181b',
               border: '1px solid #3f3f46',
               color: '#38bdf8',
               outline: 'none',
               cursor: 'pointer',
-              maxWidth: 135,
+              flex: '1 1 120px',
+              minWidth: 115,
+              maxWidth: 170,
               textOverflow: 'ellipsis',
               overflow: 'hidden',
               whiteSpace: 'nowrap',
@@ -339,13 +345,17 @@ export function CodeEditor({
             style={{
               fontSize: 11,
               fontWeight: 600,
-              padding: '4px 6px',
+              height: 30,
+              padding: '0 8px',
               borderRadius: 6,
               backgroundColor: '#27272a',
               border: '1px solid #3f3f46',
               color: '#ffffff',
               outline: 'none',
-              maxWidth: 145,
+              cursor: 'pointer',
+              flex: '1 1 140px',
+              minWidth: 135,
+              maxWidth: 190,
               textOverflow: 'ellipsis',
               overflow: 'hidden',
               whiteSpace: 'nowrap',

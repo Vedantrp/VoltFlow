@@ -231,6 +231,25 @@ export class CircuitEvaluator {
     for (const pinKey of this.getPinKeys(mcuComp, pinName)) {
       this.graph.setPinDriver(pinKey, isHigh);
     }
+
+    const cleanPin = String(pinName).replace(/^D/i, '').trim();
+    const isPin13 = cleanPin === '13';
+    const isPin2 = cleanPin === '2';
+    const isPinD4 = pinName.toUpperCase() === 'D4' || cleanPin === '4';
+
+    const currentState = mcuComp.state || {};
+    updateState(mcuComp.id, {
+      ...currentState,
+      [`pin_${pinName}`]: isHigh,
+      [`pin_${cleanPin}`]: isHigh,
+      pin13: isPin13 ? isHigh : (currentState.pin13 ?? false),
+      led13: isPin13 ? isHigh : (currentState.led13 ?? false),
+      pin2: isPin2 ? isHigh : (currentState.pin2 ?? false),
+      led2: isPin2 ? isHigh : (currentState.led2 ?? false),
+      pinD4: isPinD4 ? isHigh : (currentState.pinD4 ?? false),
+      ledD4: isPinD4 ? isHigh : (currentState.ledD4 ?? false),
+    });
+
     this.evaluateAllComponents(components, updateState);
   }
 

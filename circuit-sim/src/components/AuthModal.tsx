@@ -34,7 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   // Safety fallback: Ensure loading is never stuck for more than 4 seconds
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (loading) {
       timer = setTimeout(() => {
         setLoading(false);

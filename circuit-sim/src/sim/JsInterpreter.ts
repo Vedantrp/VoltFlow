@@ -33,12 +33,17 @@ export class JsInterpreter {
   private stepperInstances = new Map<string, { stepsPerRev: number; currentStep: number; currentAngle: number; speedRpm: number }>();
   private sequenceSteps: SequenceStep[] = [];
   private totalSequenceDuration = 0;
+  private serialRxBuffer = '';
   private code: string;
   private hooks: InterpreterHooks;
 
   constructor(code: string, hooks: InterpreterHooks) {
     this.code = code;
     this.hooks = hooks;
+  }
+
+  public receiveSerialInput(input: string) {
+    this.serialRxBuffer += input;
   }
 
   private resolvePin(pinStr: string): number {

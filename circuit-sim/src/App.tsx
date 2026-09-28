@@ -330,6 +330,15 @@ export default function App() {
     setIsRunning(false);
   }, [setIsRunning, clearAllComponentStates]);
 
+  const handleSendSerialInput = useCallback((input: string) => {
+    if (runnerRef.current) {
+      runnerRef.current.sendSerialString(input);
+    }
+    if (jsInterpreterRef.current) {
+      jsInterpreterRef.current.receiveSerialInput(input);
+    }
+  }, []);
+
   // Start / Stop Simulation
   const handleToggleSimulation = useCallback(async () => {
     if (isRunning || simulationActiveRef.current) {
@@ -736,6 +745,7 @@ export default function App() {
           compileError={compileError}
           serialText={serialText}
           onClearSerial={() => setSerialText('')}
+          onSendSerialInput={handleSendSerialInput}
         />
 
         {/* Component Drawer Sidebar */}

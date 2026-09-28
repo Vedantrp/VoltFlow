@@ -28,16 +28,16 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
   switch (type) {
     case 'arduino-uno':
-      return <ArduinoUnoRenderer isSelected={isSelected} isRunning={isRunning} />;
+      return <ArduinoUnoRenderer isSelected={isSelected} isRunning={isRunning} state={state} />;
 
     case 'arduino-nano':
-      return <ArduinoNanoRenderer isSelected={isSelected} isRunning={isRunning} />;
+      return <ArduinoNanoRenderer isSelected={isSelected} isRunning={isRunning} state={state} />;
 
     case 'esp32-devkit':
-      return <ESP32Renderer isSelected={isSelected} isRunning={isRunning} />;
+      return <ESP32Renderer isSelected={isSelected} isRunning={isRunning} state={state} />;
 
     case 'nodemcu-esp8266':
-      return <NodeMCURenderer isSelected={isSelected} isRunning={isRunning} />;
+      return <NodeMCURenderer isSelected={isSelected} isRunning={isRunning} state={state} />;
 
     case 'pir-sensor':
       return <PIRSensorRenderer isSelected={isSelected} isRunning={isRunning} isMotion={Boolean(props?.motionDetected || state?.motionDetected)} />;
@@ -194,6 +194,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
 export function hasCustom2DRenderer(type: string): boolean {
   return [
+    'arduino-uno',
     'arduino-nano',
     'nodemcu-esp8266',
     'pir-sensor',
@@ -246,7 +247,8 @@ export function hasCustom2DRenderer(type: string): boolean {
 // 1. ARDUINO UNO R3 (Exact 100% Wokwi Vector Design Matching User Image)
 // Dimension: 275.5 × 200 px (Pins aligned to catalog coordinates)
 // ─────────────────────────────────────────────────────────────────────────────
-const ArduinoUnoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ isRunning }) => {
+const ArduinoUnoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; state?: Record<string, any> }> = ({ isRunning, state = {} }) => {
+  const isLed13On = Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13));
   return (
     <svg
       width="275.5"
@@ -444,9 +446,11 @@ const ArduinoUnoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> 
         {isRunning && <circle cx="2" cy="1.2" r="3" fill="#22c55e" opacity="0.6" />}
         <text x="6" y="2.5" fill="#ffffff" fontSize="3" fontWeight="900">ON</text>
 
-        {/* L LED (Orange) */}
-        <rect x="0" y="6" width="4" height="2.5" rx="0.4" fill={isRunning ? '#f59e0b' : '#78350f'} />
-        {isRunning && <circle cx="2" cy="7.2" r="3" fill="#f59e0b" opacity="0.6" />}
+        {/* L LED (Orange on D13) */}
+        <rect x="0" y="6" width="4" height="2.5" rx="0.4" fill={isLed13On ? '#f59e0b' : '#78350f'} />
+        {isLed13On && (
+          <circle cx="2" cy="7.2" r="3.5" fill="#f59e0b" opacity="0.85" style={{ filter: 'drop-shadow(0 0 6px #f59e0b)' }} />
+        )}
         <text x="6" y="8.5" fill="#ffffff" fontSize="3" fontWeight="900">L</text>
 
         {/* TX LED */}
@@ -566,7 +570,8 @@ const ArduinoUnoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> 
 // 2. ARDUINO NANO R3 (Tinkercad-Exact 2.5D Physical Realistic SVG)
 // Dimension: 170 × 70 px
 // ─────────────────────────────────────────────────────────────────────────────
-const ArduinoNanoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ isRunning }) => {
+const ArduinoNanoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean; state?: Record<string, any> }> = ({ isRunning, state = {} }) => {
+  const isLed13On = Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13));
   return (
     <svg
       width="170"
@@ -611,6 +616,11 @@ const ArduinoNanoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }>
       {isRunning && <circle cx="148" cy="27.5" r="3.5" fill="#22c55e" opacity="0.6" />}
       <text x="148" y="23" fill="#ffffff" fontSize="4" fontWeight="800" textAnchor="middle">POW</text>
 
+      {/* L LED (Orange on D13) */}
+      <rect x="146" y="38" width="4" height="3" fill={isLed13On ? '#f59e0b' : '#78350f'} />
+      {isLed13On && <circle cx="148" cy="39.5" r="3.5" fill="#f59e0b" opacity="0.85" style={{ filter: 'drop-shadow(0 0 6px #f59e0b)' }} />}
+      <text x="148" y="35" fill="#ffffff" fontSize="4" fontWeight="800" textAnchor="middle">L</text>
+
       {/* Top 15 Header Pins (x: 19.7..154.1, y: 4.8) */}
       {Array.from({ length: 15 }).map((_, i) => {
         const x = 19.7 + i * 9.6;
@@ -642,7 +652,8 @@ const ArduinoNanoRenderer: React.FC<{ isSelected: boolean; isRunning: boolean }>
 // ESP32 DEV-KIT V1 (30-Pin Dual-Core Wi-Fi & Bluetooth Microcontroller)
 // Dimension: 107 × 201 px
 // ─────────────────────────────────────────────────────────────────────────────
-const ESP32Renderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ isSelected, isRunning }) => {
+const ESP32Renderer: React.FC<{ isSelected: boolean; isRunning: boolean; state?: Record<string, any> }> = ({ isSelected, isRunning, state = {} }) => {
+  const isGpio2On = Boolean(isRunning && (state.pin2 || state.led2 || state.pin_2 || state.pin_D2));
   const leftPins = ['EN', 'VP', 'VN', 'D34', 'D35', 'D32', 'D33', 'D25', 'D26', 'D27', 'D14', 'D12', 'D13', 'GND', 'VIN'];
   const rightPins = ['D23', 'D22', 'TX0', 'RX0', 'D21', 'D19', 'D18', 'D5', 'TX2', 'RX2', 'D4', 'D2', 'D15', 'GND', '3V3'];
   const pinYs = [24, 34, 44, 53.1, 62.9, 72.2, 81.7, 91.3, 101, 110.8, 120, 130.4, 139.5, 149, 158.5];
@@ -720,8 +731,10 @@ const ESP32Renderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ 
       {/* Status & Power LEDs */}
       <circle cx="28" cy="125" r="2.5" fill={isRunning ? '#ef4444' : '#7f1d1d'} stroke="#f87171" strokeWidth="0.5" />
       <text x="28" y="120" fill="#cbd5e1" fontSize="3.5" fontWeight="800" textAnchor="middle">PWR</text>
-      <circle cx="78" cy="125" r="2.5" fill={isRunning ? '#38bdf8' : '#0369a1'} stroke="#60a5fa" strokeWidth="0.5" />
-      <text x="78" y="120" fill="#cbd5e1" fontSize="3.5" fontWeight="800" textAnchor="middle">COM</text>
+
+      {/* GPIO 2 Built-in Blue LED */}
+      <circle cx="78" cy="125" r="2.5" fill={isGpio2On ? '#38bdf8' : '#0369a1'} stroke="#60a5fa" strokeWidth="0.5" style={{ filter: isGpio2On ? 'drop-shadow(0 0 6px #38bdf8)' : undefined }} />
+      <text x="78" y="120" fill="#cbd5e1" fontSize="3.5" fontWeight="800" textAnchor="middle">D2</text>
 
       {/* EN & BOOT Tactile Push Buttons */}
       <g>
@@ -775,7 +788,8 @@ const ESP32Renderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ 
 // 3. ESP8266 NODEMCU V2 (Authentic Pinout & Aesthetic)
 // Dimension: 120 × 215 px
 // ─────────────────────────────────────────────────────────────────────────────
-const NodeMCURenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = ({ isSelected, isRunning }) => {
+const NodeMCURenderer: React.FC<{ isSelected: boolean; isRunning: boolean; state?: Record<string, any> }> = ({ isSelected, isRunning, state = {} }) => {
+  const isLedD4On = Boolean(isRunning && (state.pinD4 || state.pin4 || state.ledD4 || state.pin_D4 || state.pin_4));
   const leftPins = ['A0', 'RSV', 'RSV', 'SD3', 'SD2', 'SD1', 'CMD', 'SD0', 'CLK', 'GND', '3V3', 'EN', 'RST', 'GND', 'VIN'];
   const rightPins = ['D0', 'D1', 'D2', 'D3', 'D4', '3V3', 'GND', 'D5', 'D6', 'D7', 'D8', 'RX', 'TX', 'GND', '3V3'];
 
@@ -838,11 +852,11 @@ const NodeMCURenderer: React.FC<{ isSelected: boolean; isRunning: boolean }> = (
         <text x="99" y="180" fill="#94a3b8" fontSize="4" fontWeight="800" textAnchor="middle">FLASH</text>
       </g>
 
-      {/* Live Status LEDs */}
+      {/* Live Power & D4 Status LEDs */}
       <rect x="32" y="122" width="6" height="4" rx="0.5" fill={isRunning ? '#ef4444' : '#7f1d1d'} />
       {isRunning && <circle cx="35" cy="124" r="5" fill="#ef4444" opacity="0.4" />}
-      <rect x="82" y="122" width="6" height="4" rx="0.5" fill={isRunning ? '#38bdf8' : '#0369a1'} />
-      {isRunning && <circle cx="85" cy="124" r="5" fill="#38bdf8" opacity="0.5" />}
+      <rect x="82" y="122" width="6" height="4" rx="0.5" fill={isLedD4On ? '#38bdf8' : '#0369a1'} />
+      {isLedD4On && <circle cx="85" cy="124" r="5" fill="#38bdf8" opacity="0.85" style={{ filter: 'drop-shadow(0 0 6px #38bdf8)' }} />}
 
       {/* CP2102 Bridge Chip */}
       <rect x="45" y="140" width="30" height="24" rx="2" fill="#18181b" stroke="#27272a" strokeWidth="0.8" />
@@ -1564,7 +1578,9 @@ const LEDRenderer: React.FC<{
       viewBox="0 0 40 50"
       style={{
         overflow: 'visible',
-        filter: burnedOut
+        filter: isSelected
+          ? 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.9)) drop-shadow(0 4px 8px rgba(0,0,0,0.5))'
+          : burnedOut
           ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.6))'
           : isOn
           ? `drop-shadow(0 0 ${Math.max(4, 14 * brightness)}px ${pal.onGlow}) drop-shadow(0 0 ${Math.max(8, 28 * brightness)}px ${pal.onGlow}) drop-shadow(0 4px 8px rgba(0,0,0,0.5))`

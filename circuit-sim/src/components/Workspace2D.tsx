@@ -122,7 +122,7 @@ function getWokwiProps(comp: PlacedComponent, isRunning: boolean): Record<string
       return {
         ...props,
         ...state,
-        led13: Boolean(isRunning && (state.pin13 || state.led13 || props.pin13)),
+        led13: Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13 || props.pin13)),
         ledPower: isRunning,
         ledRX: Boolean(isRunning && state.rx),
         ledTX: Boolean(isRunning && state.tx),
@@ -132,7 +132,7 @@ function getWokwiProps(comp: PlacedComponent, isRunning: boolean): Record<string
       return {
         ...props,
         ...state,
-        led13: Boolean(isRunning && (state.pin13 || props.pin13)),
+        led13: Boolean(isRunning && (state.pin13 || state.led13 || state.pin_13 || state.pin_D13 || props.pin13)),
         ledPower: isRunning,
       };
 
