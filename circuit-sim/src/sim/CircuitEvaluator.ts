@@ -431,11 +431,14 @@ export class CircuitEvaluator {
             stepperRec.lastPhase = currentPhase;
           }
 
-          const currentAngle = comp.state?.angle ?? stepperRec.angle;
-          const currentStep = comp.state?.step ?? stepperRec.step;
+          // If manual inspector changed props.angle when not running, sync stepperRec
+          if (comp.props?.angle !== undefined && comp.state?.angle === undefined) {
+            stepperRec.angle = comp.props.angle;
+          }
+
           updateState(comp.id, {
-            angle: currentAngle,
-            step: currentStep,
+            angle: stepperRec.angle,
+            step: stepperRec.step,
             coilA_pos: aPos,
             coilA_neg: aNeg,
             coilB_pos: bPos,

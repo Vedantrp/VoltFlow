@@ -887,6 +887,7 @@ export default function App() {
         <SensorInspectorModal
           component={selectedComponent}
           onUpdateProps={updateComponentProps}
+          onUpdateState={updateComponentState}
           isRunning={isRunning}
         />
       )}

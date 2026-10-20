@@ -5,6 +5,7 @@ import type { PlacedComponent } from '../types';
 interface SensorInspectorProps {
   component: PlacedComponent;
   onUpdateProps: (id: string, props: Record<string, any>) => void;
+  onUpdateState?: (id: string, state: Record<string, any>) => void;
   isRunning: boolean;
 }
 
@@ -17,6 +18,7 @@ function formatResistance(r: number): string {
 export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
   component,
   onUpdateProps,
+  onUpdateState,
   isRunning,
 }) => {
   const { id, type, name, props } = component;
@@ -806,7 +808,9 @@ export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
             value={((component.state?.angle !== undefined ? component.state.angle : (props.angle ?? 0)) % 360 + 360) % 360}
             onChange={(e) => {
               const newAngle = parseInt(e.target.value, 10);
-              onUpdateProps(id, { angle: newAngle, step: Math.round((newAngle / 360) * 200) });
+              const newStep = Math.round((newAngle / 360) * 200);
+              onUpdateProps(id, { angle: newAngle, step: newStep });
+              onUpdateState?.(id, { angle: newAngle, step: newStep });
             }}
             style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }}
           />
@@ -819,7 +823,9 @@ export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
                 onClick={() => {
                   const current = component.state?.angle ?? props.angle ?? 0;
                   const nextAngle = deg === 0 ? 0 : (current + deg) % 360;
-                  onUpdateProps(id, { angle: nextAngle, step: (component.state?.step ?? 0) + Math.round((deg / 360) * 200) });
+                  const nextStep = (component.state?.step ?? 0) + Math.round((deg / 360) * 200);
+                  onUpdateProps(id, { angle: nextAngle, step: nextStep });
+                  onUpdateState?.(id, { angle: nextAngle, step: nextStep });
                 }}
                 style={{
                   flex: 1,
