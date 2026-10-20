@@ -70,6 +70,72 @@
   }
   </script>
 
+  <!-- Structured Data: FAQPage Schema for Google Search Rich Cards -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I simulate Arduino Uno, ESP32, and sensors online in VoltFlow?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Select a microcontroller (Arduino Uno R3, Arduino Nano, ESP32 DevKit, or NodeMCU ESP8266) from the Component Drawer. Wire sensor pins (VCC, GND, and Signal/Data) directly to the headers or breadboard. Open the built-in C++ editor, write or paste your sketch with setup() and loop(), and click Start Simulation to run your circuit in real time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I use the interactive Serial Monitor & Serial Plotter?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Open the Code window and click 'Open Serial Monitor'. You can type interactive keyboard inputs (numbers, chars, and strings) and send them to your sketch via Serial.read(), Serial.parseInt(), and Serial.readString(), with instant telemetry displayed via Serial.println()."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does VoltFlow compare to Tinkercad Circuits, Wokwi, and Proteus?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "VoltFlow combines intuitive 2D drag-and-drop circuit wiring with high-speed C++ compilation and ESP32/NodeMCU simulation. Unlike desktop software like Proteus or Multisim, VoltFlow runs 100% in your browser on desktop, iPad, or mobile without installing software, and includes automated BOM export and PCB Gerber generation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I simulate DHT11, Ultrasonic HC-SR04, Gas, and Servo motors?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! VoltFlow features real-time interactive widgets: adjust temperature and humidity sliders on the DHT11, change distance on the Ultrasonic sensor, adjust gas PPM on the MQ-2 sensor, or turn potentiometer knobs. SG90 Servo motors sweep angles in real time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I export PCB Gerber files and a Bill of Materials (BOM)?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Click 'Export BOM' in the top toolbar to generate a complete parts list in CSV format. Click 'PCB View' to inspect copper trace routing and export industry-standard RS-274X Gerber zip files ready for PCB manufacturing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does VoltFlow work on mobile phones and tablets?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! VoltFlow includes a touch-optimized Mobile Quick Bar for phones and tablets. You can pan, zoom the canvas, place and rotate components, inspect live sensor badges, and edit C++ firmware code smoothly on iOS, iPadOS, and Android."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is VoltFlow Studio free to use, and do I need to create an account?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "VoltFlow is 100% free with no paywalls or trial expirations. You can start designing circuits immediately as a guest. Creating a free account enables cloud autosaving to resume projects on any device."
+        }
+      }
+    ]
+  }
+  </script>
+
   <!-- Typography Preconnects -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

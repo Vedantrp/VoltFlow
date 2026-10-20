@@ -19,6 +19,7 @@ import {
 import { authService } from '../services/authService';
 import { CIRCUIT_TEMPLATES, TEMPLATE_CATEGORIES, type CircuitTemplate } from '../data/circuitTemplates';
 import type { UserProfile, SavedProject } from '../types';
+import { FAQSection } from './FAQSection';
 
 interface DashboardHomePageProps {
   onLaunchSimulator: () => void;
@@ -207,6 +208,17 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
               >
                 50
               </span>
+            </button>
+            <button
+              onClick={() => {
+                if (activeTab !== 'dashboard') setActiveTab('dashboard');
+                setTimeout(() => {
+                  document.getElementById('faq-section')?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              style={{ background: 'none', border: 'none', color: '#4A524D', cursor: 'pointer', fontSize: 14 }}
+            >
+              FAQ &amp; Guides
             </button>
             <button
               onClick={onNavigatePrivacy}
@@ -866,6 +878,7 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
               })}
             </div>
           </main>
+          <FAQSection onLaunchSimulator={onLaunchSimulator} />
         </>
       ) : (
         /* TEMPLATES TAB VIEW (50 FULL CIRCUIT TEMPLATES) */
@@ -1257,6 +1270,17 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
           <div>
             <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: 14, fontSize: 14 }}>Legal &amp; Support</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, color: '#CBBBA0' }}>
+              <span
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  if (activeTab !== 'dashboard') setActiveTab('dashboard');
+                  setTimeout(() => {
+                    document.getElementById('faq-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 50);
+                }}
+              >
+                FAQ &amp; Guides
+              </span>
               <span style={{ cursor: 'pointer' }} onClick={onNavigatePrivacy}>Privacy Policy</span>
               <span style={{ cursor: 'pointer' }} onClick={onNavigateTerms}>Terms &amp; Conditions</span>
               <span style={{ cursor: 'pointer' }} onClick={onOpenAuthModal}>Account Management</span>
