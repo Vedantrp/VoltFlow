@@ -471,7 +471,13 @@ export default function App() {
           }
           return 512;
         },
-        onAnalogWrite: () => {},
+        onAnalogWrite: (pin, val) => {
+          if (!simulationActiveRef.current) return;
+          const liveComps = useCircuitStore.getState().components;
+          if (mcuComp) {
+            evaluator.handlePinOutputChange(mcuComp, String(pin), val > 0, liveComps, updateComponentState);
+          }
+        },
         onTone: (pin, frequency) => {
           if (!simulationActiveRef.current) return;
           const liveComps = useCircuitStore.getState().components;

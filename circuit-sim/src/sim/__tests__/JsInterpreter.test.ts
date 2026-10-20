@@ -516,6 +516,130 @@ describe('JsInterpreter Unit Tests', () => {
 
     interpreter.stop();
   });
+
+  it('handles general-purpose Serial.readString() with string comparisons', () => {
+    const code = `
+      String cmd;
+      void setup() {
+        pinMode(13, OUTPUT);
+      }
+      void loop() {
+        if (Serial.available()) {
+          cmd = Serial.readString();
+          if (cmd == "ACTIVATE") {
+            digitalWrite(13, HIGH);
+            Serial.println("System Active");
+          } else if (cmd == "SHUTDOWN") {
+            digitalWrite(13, LOW);
+            Serial.println("System Inactive");
+          }
+        }
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    let logs = '';
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => { pinStates[pin] = high; },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSerialPrint: (t) => { logs += t; },
+    });
+
+    interpreter.start();
+    interpreter.receiveSerialInput('ACTIVATE');
+    expect(pinStates[13]).toBe(true);
+    expect(logs).toContain('System Active\n');
+
+    interpreter.receiveSerialInput('SHUTDOWN');
+    expect(pinStates[13]).toBe(false);
+    expect(logs).toContain('System Inactive\n');
+
+    interpreter.stop();
+  });
+
+  it('handles general-purpose Serial.parseInt() for PWM control', () => {
+    const code = `
+      int pin = 9;
+      void setup() {
+        pinMode(pin, OUTPUT);
+      }
+      void loop() {
+        if (Serial.available() > 0) {
+          int brightness = Serial.parseInt();
+          analogWrite(pin, brightness);
+          Serial.print("Set: ");
+          Serial.println(brightness);
+        }
+      }
+    `;
+
+    const pwmValues: Record<number, number> = {};
+    let logs = '';
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: () => {},
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: (pin, val) => { pwmValues[pin] = val; },
+      onSerialPrint: (t) => { logs += t; },
+    });
+
+    interpreter.start();
+    interpreter.receiveSerialInput('185\n');
+    expect(pwmValues[9]).toBe(185);
+    expect(logs).toContain('Set: 185\n');
+
+    interpreter.stop();
+  });
+
+  it('handles switch-case with Serial.read() and custom user functions', () => {
+    const code = `
+      int ledState = 0;
+      void turnOn() {
+        ledState = 1;
+        digitalWrite(7, HIGH);
+      }
+      void turnOff() {
+        ledState = 0;
+        digitalWrite(7, LOW);
+      }
+      void loop() {
+        if (Serial.available() > 0) {
+          char ch = Serial.read();
+          switch (ch) {
+            case 'a':
+              turnOn();
+              break;
+            case 'b':
+              turnOff();
+              break;
+          }
+        }
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => { pinStates[pin] = high; },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSerialPrint: () => {},
+    });
+
+    interpreter.start();
+    interpreter.receiveSerialInput('a');
+    expect(pinStates[7]).toBe(true);
+
+    interpreter.receiveSerialInput('b');
+    expect(pinStates[7]).toBe(false);
+
+    interpreter.stop();
+  });
 });
 
 

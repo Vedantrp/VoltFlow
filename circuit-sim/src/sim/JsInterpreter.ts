@@ -30,6 +30,12 @@ export class JsInterpreter {
   private startTime = Date.now();
   private pinModes: Record<number, string> = {};
   private varMap = new Map<string, number>();
+  private stringVarMap = new Map<string, string>();
+  private customFunctions = new Map<string, string>();
+  private lcdLine1 = '';
+  private lcdLine2 = '';
+  private lcdCursorCol = 0;
+  private lcdCursorRow = 0;
   private pinStates = new Map<number, boolean>();
   private serialControlledPins = new Set<number>();
   private servoInstances = new Map<string, { pin: number; currentAngle: number }>();
@@ -50,6 +56,10 @@ export class JsInterpreter {
     if (this.isRunning) {
       this.evaluateSerialAndControlBlocks();
     }
+  }
+
+  public clearSerialBuffer() {
+    this.serialRxBuffer = '';
   }
 
   public extractFunctionBody(funcName: string): string | null {
@@ -301,50 +311,42 @@ export class JsInterpreter {
       }
     }
 
-    // Identify pins that are controlled within Serial blocks so automatic loop doesn't overwrite them
+    // Clear simulation runtime maps
     this.serialControlledPins.clear();
     this.pinStates.clear();
-    const availRe = /(?:if|while)\s*\(\s*Serial\.available[\s\S]*?\{/g;
-    let am;
-    while ((am = availRe.exec(this.code)) !== null) {
-      const startIdx = am.index + am[0].length;
-      let depth = 1;
-      let endIdx = this.code.length;
-      for (let i = startIdx; i < this.code.length; i++) {
-        if (this.code[i] === '{') depth++;
-        else if (this.code[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            endIdx = i;
-            break;
-          }
-        }
+    this.stringVarMap.clear();
+    this.customFunctions.clear();
+
+    // Register all custom functions defined in the sketch
+    const funcDefRegex = /(?:void|int|float|double|long|byte|bool|auto)\s+([A-Za-z0-9_]+)\s*\([^)]*\)\s*\{/g;
+    let fm;
+    while ((fm = funcDefRegex.exec(this.code)) !== null) {
+      const name = fm[1];
+      if (name !== 'setup' && name !== 'loop') {
+        const body = this.extractFunctionBody(name);
+        if (body) this.customFunctions.set(name, body);
       }
-      const serialBlock = this.code.slice(startIdx, endIdx);
+    }
+
+    // Identify pins that are controlled within Serial logic so automatic loop doesn't overwrite them
+    const hasSerial =
+      this.code.includes('Serial.available') ||
+      this.code.includes('Serial.read') ||
+      this.code.includes('Serial.parseInt') ||
+      this.code.includes('Serial.readString');
+    if (hasSerial) {
+      const loopBody = this.extractFunctionBody('loop') || this.code;
       const dwRe = /digitalWrite\s*\(\s*([A-Za-z0-9_]+)/g;
       let dw;
-      while ((dw = dwRe.exec(serialBlock)) !== null) {
+      while ((dw = dwRe.exec(loopBody)) !== null) {
         this.serialControlledPins.add(this.resolvePin(dw[1]));
       }
     }
 
-    // Execute setup() statements once (pin initialization & setup serial prints)
+    // Execute setup() statements once (pin initialization, variables, & setup serial prints)
     const setupBody = this.extractFunctionBody('setup');
     if (setupBody) {
-      const dwRe = /digitalWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)/g;
-      let dw;
-      while ((dw = dwRe.exec(setupBody)) !== null) {
-        const pin = this.resolvePin(dw[1]);
-        const valStr = dw[2].trim();
-        const isHigh =
-          valStr === 'HIGH' ||
-          valStr === '1' ||
-          valStr === 'true' ||
-          (this.varMap.has(valStr) && this.varMap.get(valStr) !== 0);
-        this.pinStates.set(pin, isHigh);
-        this.hooks.onDigitalWrite(pin, isHigh);
-      }
-      this.executeSerialPrintsInBlock(setupBody);
+      this.executeBlockStatements(setupBody);
     }
 
     this.buildSequenceTimeline();
@@ -585,55 +587,337 @@ export class JsInterpreter {
     }
   };
 
-  private executeControlBlock(block: string) {
-    // 1. Process all digitalWrite statements in this block
-    const dwRe = /digitalWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)/g;
-    let dw;
-    while ((dw = dwRe.exec(block)) !== null) {
-      const pin = this.resolvePin(dw[1]);
-      const valStr = dw[2].trim();
-      const isHigh =
-        valStr === 'HIGH' ||
-        valStr === '1' ||
-        valStr === 'true' ||
-        (this.varMap.has(valStr) && this.varMap.get(valStr) !== 0);
-      this.pinStates.set(pin, isHigh);
-      this.hooks.onDigitalWrite(pin, isHigh);
+  private evaluateSerialAndControlBlocks() {
+    if (this.serialRxBuffer.length === 0) return;
+    const loopBody = this.extractFunctionBody('loop') || this.code;
+
+    // Discard leading \r or \n if sketch doesn't care about whitespace
+    if (
+      (this.serialRxBuffer[0] === '\r' || this.serialRxBuffer[0] === '\n') &&
+      !this.code.includes('\\n') &&
+      !this.code.includes('\\r') &&
+      !this.code.includes('readString')
+    ) {
+      this.serialRxBuffer = this.serialRxBuffer.replace(/^[\r\n]+/, '');
+      if (this.serialRxBuffer.length === 0) return;
     }
 
-    // 2. Process all Serial.print / Serial.println statements in this block
-    this.executeSerialPrintsInBlock(block);
+    // Execute the loop body with the incoming serial buffer
+    this.executeBlockStatements(loopBody);
+  }
 
-    // 3. Process tone / noTone statements in this block
-    const toneRe = /tone\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^,)]+)(?:\s*,\s*([^)]+))?\s*\)/g;
-    let tn;
-    while ((tn = toneRe.exec(block)) !== null) {
-      const pin = this.resolvePin(tn[1]);
-      const freq = this.varMap.get(tn[2].trim()) ?? this.evalMathExpr(tn[2].trim()) ?? parseFloat(tn[2].trim()) ?? 440;
-      this.hooks.onTone?.(pin, isNaN(freq) ? 440 : freq);
-      this.hooks.onDigitalWrite(pin, true);
-    }
+  public executeBlockStatements(block: string) {
+    if (!block || !block.trim()) return;
 
-    const noToneRe = /noTone\s*\(\s*([A-Za-z0-9_]+)\s*\)/g;
-    let ntn;
-    while ((ntn = noToneRe.exec(block)) !== null) {
-      const pin = this.resolvePin(ntn[1]);
-      this.hooks.onNoTone?.(pin);
-      this.hooks.onDigitalWrite(pin, false);
+    let idx = 0;
+    const len = block.length;
+
+    while (idx < len) {
+      // 1. Skip whitespace
+      while (idx < len && /\s/.test(block[idx])) idx++;
+      if (idx >= len) break;
+
+      // Skip single line comment //
+      if (block.slice(idx, idx + 2) === '//') {
+        const nextNl = block.indexOf('\n', idx);
+        idx = nextNl === -1 ? len : nextNl + 1;
+        continue;
+      }
+      // Skip multi-line comment /* ... */
+      if (block.slice(idx, idx + 2) === '/*') {
+        const endCm = block.indexOf('*/', idx + 2);
+        idx = endCm === -1 ? len : endCm + 2;
+        continue;
+      }
+
+      // 2. Check if (condition)
+      if (block.slice(idx).startsWith('if') && /\bif\s*\(/.test(block.slice(idx))) {
+        const ifChain = this.parseIfElseChain(block, idx);
+        if (ifChain) {
+          idx = ifChain.nextIdx;
+          for (const branch of ifChain.branches) {
+            if (branch.type === 'else' || this.evalCondition(branch.condition) === true) {
+              this.executeBlockStatements(branch.body);
+              break;
+            }
+          }
+          continue;
+        }
+      }
+
+      // 3. Check switch (expr) { case ... }
+      if (block.slice(idx).startsWith('switch') && /\bswitch\s*\(/.test(block.slice(idx))) {
+        const sw = this.parseSwitch(block, idx);
+        if (sw) {
+          idx = sw.nextIdx;
+          this.executeSwitch(sw.expr, sw.body);
+          continue;
+        }
+      }
+
+      // 4. Check while (condition)
+      if (block.slice(idx).startsWith('while') && /\bwhile\s*\(/.test(block.slice(idx))) {
+        const wh = this.parseWhile(block, idx);
+        if (wh) {
+          idx = wh.nextIdx;
+          let count = 0;
+          while (count++ < 100 && this.evalCondition(wh.condition) === true) {
+            this.executeBlockStatements(wh.body);
+          }
+          continue;
+        }
+      }
+
+      // 5. Normal statement ending in ;
+      let semiIdx = block.indexOf(';', idx);
+      if (semiIdx === -1) semiIdx = len;
+      const stmt = block.slice(idx, semiIdx).trim();
+      idx = semiIdx + 1;
+
+      if (stmt) {
+        this.executeSingleStatement(stmt);
+      }
     }
   }
 
-  private executeSerialPrintsInBlock(block: string) {
-    const spRe = /Serial\.(print(?:ln)?)\s*\(\s*([^)]*)\s*\)/g;
-    let sp;
-    while ((sp = spRe.exec(block)) !== null) {
-      const isLn = sp[1] === 'println';
-      const rawArg = sp[2].trim();
+  private parseIfElseChain(block: string, startIdx: number) {
+    const branches: Array<{ type: 'if' | 'else if' | 'else'; condition: string; body: string }> = [];
+    let idx = startIdx;
+    const len = block.length;
+
+    while (idx < len) {
+      while (idx < len && /\s/.test(block[idx])) idx++;
+      if (idx >= len) break;
+
+      let type: 'if' | 'else if' | 'else';
+      if (branches.length === 0) {
+        if (!block.slice(idx).startsWith('if')) break;
+        type = 'if';
+        idx += 2;
+      } else {
+        if (block.slice(idx).startsWith('else if')) {
+          type = 'else if';
+          idx += 7;
+        } else if (block.slice(idx).startsWith('else')) {
+          type = 'else';
+          idx += 4;
+        } else {
+          break;
+        }
+      }
+
+      while (idx < len && /\s/.test(block[idx])) idx++;
+
+      let condition = '';
+      if (type !== 'else') {
+        if (block[idx] !== '(') break;
+        idx++; // skip '('
+        let pDepth = 1;
+        const condStart = idx;
+        while (idx < len && pDepth > 0) {
+          if (block[idx] === '(') pDepth++;
+          else if (block[idx] === ')') pDepth--;
+          idx++;
+        }
+        condition = block.slice(condStart, idx - 1).trim();
+      }
+
+      while (idx < len && /\s/.test(block[idx])) idx++;
+
+      let body = '';
+      if (block[idx] === '{') {
+        idx++; // skip '{'
+        let bDepth = 1;
+        const bodyStart = idx;
+        while (idx < len && bDepth > 0) {
+          if (block[idx] === '{') bDepth++;
+          else if (block[idx] === '}') bDepth--;
+          idx++;
+        }
+        body = block.slice(bodyStart, idx - 1);
+      } else {
+        const semiIdx = block.indexOf(';', idx);
+        if (semiIdx !== -1) {
+          body = block.slice(idx, semiIdx + 1);
+          idx = semiIdx + 1;
+        } else {
+          body = block.slice(idx);
+          idx = len;
+        }
+      }
+
+      branches.push({ type, condition, body });
+      if (type === 'else') break;
+    }
+
+    return branches.length > 0 ? { branches, nextIdx: idx } : null;
+  }
+
+  private parseWhile(block: string, startIdx: number) {
+    let idx = startIdx + 5; // skip 'while'
+    const len = block.length;
+    while (idx < len && /\s/.test(block[idx])) idx++;
+    if (block[idx] !== '(') return null;
+    idx++;
+    let pDepth = 1;
+    const condStart = idx;
+    while (idx < len && pDepth > 0) {
+      if (block[idx] === '(') pDepth++;
+      else if (block[idx] === ')') pDepth--;
+      idx++;
+    }
+    const condition = block.slice(condStart, idx - 1).trim();
+
+    while (idx < len && /\s/.test(block[idx])) idx++;
+    let body = '';
+    if (block[idx] === '{') {
+      idx++;
+      let bDepth = 1;
+      const bodyStart = idx;
+      while (idx < len && bDepth > 0) {
+        if (block[idx] === '{') bDepth++;
+        else if (block[idx] === '}') bDepth--;
+        idx++;
+      }
+      body = block.slice(bodyStart, idx - 1);
+    } else {
+      const semiIdx = block.indexOf(';', idx);
+      if (semiIdx !== -1) {
+        body = block.slice(idx, semiIdx + 1);
+        idx = semiIdx + 1;
+      } else {
+        body = block.slice(idx);
+        idx = len;
+      }
+    }
+    return { condition, body, nextIdx: idx };
+  }
+
+  private parseSwitch(block: string, startIdx: number) {
+    let idx = startIdx + 6; // skip 'switch'
+    const len = block.length;
+    while (idx < len && /\s/.test(block[idx])) idx++;
+    if (block[idx] !== '(') return null;
+    idx++;
+    let pDepth = 1;
+    const exprStart = idx;
+    while (idx < len && pDepth > 0) {
+      if (block[idx] === '(') pDepth++;
+      else if (block[idx] === ')') pDepth--;
+      idx++;
+    }
+    const expr = block.slice(exprStart, idx - 1).trim();
+
+    while (idx < len && /\s/.test(block[idx])) idx++;
+    if (block[idx] !== '{') return null;
+    idx++;
+    let bDepth = 1;
+    const bodyStart = idx;
+    while (idx < len && bDepth > 0) {
+      if (block[idx] === '{') bDepth++;
+      else if (block[idx] === '}') bDepth--;
+      idx++;
+    }
+    const body = block.slice(bodyStart, idx - 1);
+    return { expr, body, nextIdx: idx };
+  }
+
+  private executeSwitch(exprStr: string, body: string) {
+    let val: number | string | null = null;
+    if (exprStr === 'Serial.read()' || exprStr.startsWith('Serial.read()')) {
+      if (this.serialRxBuffer.length > 0) {
+        val = this.serialRxBuffer.charCodeAt(0);
+        this.serialRxBuffer = this.serialRxBuffer.slice(1);
+      } else {
+        val = -1;
+      }
+    } else if (this.varMap.has(exprStr)) {
+      val = this.varMap.get(exprStr)!;
+    } else if (this.stringVarMap.has(exprStr)) {
+      val = this.stringVarMap.get(exprStr)!;
+    } else {
+      val = this.evalMathExpr(exprStr);
+    }
+    if (val === null) return;
+
+    const caseRegex = /case\s+([^:]+):([\s\S]*?)(?=case\s+[^:]+:|default\s*:|$)/g;
+    let cm;
+    let matched = false;
+    while ((cm = caseRegex.exec(body)) !== null) {
+      const caseRaw = cm[1].trim();
+      const caseStatements = cm[2];
+      let matches = false;
+
+      if ((caseRaw.startsWith("'") && caseRaw.endsWith("'")) || (caseRaw.startsWith('"') && caseRaw.endsWith('"'))) {
+        const charContent = caseRaw.slice(1, -1);
+        const charCode = charContent.charCodeAt(0);
+        matches = val === charCode || val === charContent;
+      } else {
+        const numVal = parseInt(caseRaw, 10);
+        matches = val === numVal || (typeof val === 'number' && val === (numVal + 48));
+      }
+
+      if (matches) {
+        matched = true;
+        this.executeBlockStatements(caseStatements);
+        return;
+      }
+    }
+
+    if (!matched) {
+      const defMatch = /default\s*:([\s\S]*?)(?=case\s+[^:]+:|$)/.exec(body);
+      if (defMatch) {
+        this.executeBlockStatements(defMatch[1]);
+      }
+    }
+  }
+
+  private executeSingleStatement(stmt: string) {
+    const s = stmt.trim();
+    if (!s) return;
+
+    // 1. digitalWrite(pin, val)
+    const dwMatch = /^digitalWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)$/.exec(s);
+    if (dwMatch) {
+      const pin = this.resolvePin(dwMatch[1]);
+      const valExpr = dwMatch[2].trim();
+      let isHigh = false;
+      if (valExpr === 'HIGH' || valExpr === '1' || valExpr === 'true') {
+        isHigh = true;
+      } else if (valExpr === 'LOW' || valExpr === '0' || valExpr === 'false') {
+        isHigh = false;
+      } else if (this.varMap.has(valExpr)) {
+        isHigh = this.varMap.get(valExpr)! !== 0;
+      } else {
+        const cond = this.evalCondition(valExpr);
+        isHigh = cond !== null ? cond : false;
+      }
+      this.pinStates.set(pin, isHigh);
+      this.serialControlledPins.add(pin);
+      this.hooks.onDigitalWrite(pin, isHigh);
+      return;
+    }
+
+    // 2. analogWrite(pin, val)
+    const awMatch = /^analogWrite\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^)]+)\)$/.exec(s);
+    if (awMatch) {
+      const pin = this.resolvePin(awMatch[1]);
+      const valExpr = awMatch[2].trim();
+      const val = this.varMap.get(valExpr) ?? this.evalMathExpr(valExpr) ?? parseFloat(valExpr) ?? 0;
+      this.hooks.onAnalogWrite(pin, val);
+      return;
+    }
+
+    // 3. Serial.print / Serial.println
+    const spMatch = /^Serial\.(print(?:ln)?)\s*\(\s*([^)]*)\s*\)$/.exec(s);
+    if (spMatch) {
+      const isLn = spMatch[1] === 'println';
+      const rawArg = spMatch[2].trim();
       let printText = '';
 
       if (!rawArg) {
         if (isLn) this.hooks.onSerialPrint('\n');
-        continue;
+        return;
       }
 
       if ((rawArg.startsWith('"') && rawArg.endsWith('"')) || (rawArg.startsWith("'") && rawArg.endsWith("'"))) {
@@ -644,7 +928,9 @@ export class JsInterpreter {
         const precPart = commaIdx !== -1 ? parseInt(rawArg.slice(commaIdx + 1).trim(), 10) : null;
         const precision = precPart !== null && !isNaN(precPart) ? precPart : null;
 
-        if (this.varMap.has(exprPart)) {
+        if (this.stringVarMap.has(exprPart)) {
+          printText = this.stringVarMap.get(exprPart)!;
+        } else if (this.varMap.has(exprPart)) {
           const v = this.varMap.get(exprPart)!;
           printText = precision !== null ? v.toFixed(precision) : (v % 1 !== 0 ? v.toFixed(2) : String(v));
         } else {
@@ -658,132 +944,236 @@ export class JsInterpreter {
       }
 
       this.hooks.onSerialPrint(printText + (isLn ? '\n' : ''));
+      return;
+    }
+
+    // 4. Serial.write(val)
+    const swMatch = /^Serial\.write\s*\(\s*([^)]+)\s*\)$/.exec(s);
+    if (swMatch) {
+      const arg = swMatch[1].trim();
+      if ((arg.startsWith("'") && arg.endsWith("'")) || (arg.startsWith('"') && arg.endsWith('"'))) {
+        this.hooks.onSerialPrint(arg.slice(1, -1));
+      } else if (this.stringVarMap.has(arg)) {
+        this.hooks.onSerialPrint(this.stringVarMap.get(arg)!);
+      } else {
+        const num = this.varMap.get(arg) ?? parseInt(arg, 10);
+        if (!isNaN(num)) {
+          this.hooks.onSerialPrint(String.fromCharCode(num));
+        } else {
+          this.hooks.onSerialPrint(arg);
+        }
+      }
+      return;
+    }
+
+    // 5. tone(pin, freq, dur) / noTone(pin)
+    const tnMatch = /^tone\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([^,)]+)(?:\s*,\s*([^)]+))?\s*\)$/.exec(s);
+    if (tnMatch) {
+      const pin = this.resolvePin(tnMatch[1]);
+      const freq = this.varMap.get(tnMatch[2].trim()) ?? this.evalMathExpr(tnMatch[2].trim()) ?? parseFloat(tnMatch[2].trim()) ?? 440;
+      const dur = tnMatch[3] ? (this.varMap.get(tnMatch[3].trim()) ?? parseFloat(tnMatch[3].trim())) : undefined;
+      this.hooks.onTone?.(pin, freq, dur);
+      this.hooks.onDigitalWrite(pin, true);
+      return;
+    }
+
+    const ntnMatch = /^noTone\s*\(\s*([A-Za-z0-9_]+)\s*\)$/.exec(s);
+    if (ntnMatch) {
+      const pin = this.resolvePin(ntnMatch[1]);
+      this.hooks.onNoTone?.(pin);
+      this.hooks.onDigitalWrite(pin, false);
+      return;
+    }
+
+    // 6. Servo: servoName.write(angle)
+    const servoMatch = /^([A-Za-z0-9_]+)\.write\s*\(\s*([^)]+)\s*\)$/.exec(s);
+    if (servoMatch) {
+      const sName = servoMatch[1];
+      const angleExpr = servoMatch[2].trim();
+      const angle = this.varMap.get(angleExpr) ?? this.evalMathExpr(angleExpr) ?? parseFloat(angleExpr) ?? 90;
+      const inst = this.servoInstances.get(sName);
+      if (inst) {
+        inst.currentAngle = angle;
+        this.hooks.onServoWrite?.(inst.pin, angle);
+      } else {
+        this.hooks.onServoWrite?.(0, angle);
+      }
+      return;
+    }
+
+    // 7. LCD methods
+    if (/^[A-Za-z0-9_]+\.(?:print|setCursor|clear|home)\s*\(/.test(s)) {
+      this.executeLcdStatement(s);
+      return;
+    }
+
+    // 8. Variable assignments
+    const asgnMatch = /^(?:(?:const|let|var|int|float|double|char|bool|boolean|long|short|byte|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|String|auto)\s+)?([A-Za-z0-9_]+)\s*=\s*([\s\S]+)$/.exec(s);
+    if (asgnMatch) {
+      const varName = asgnMatch[1];
+      const rhs = asgnMatch[2].trim();
+
+      // Serial.read()
+      if (rhs === 'Serial.read()' || rhs.startsWith('Serial.read()')) {
+        if (this.serialRxBuffer.length > 0) {
+          const code = this.serialRxBuffer.charCodeAt(0);
+          this.serialRxBuffer = this.serialRxBuffer.slice(1);
+          this.varMap.set(varName, code);
+          this.stringVarMap.delete(varName);
+        } else {
+          this.varMap.set(varName, -1);
+          this.stringVarMap.delete(varName);
+        }
+        return;
+      }
+
+      // Serial.readString()
+      if (rhs === 'Serial.readString()' || rhs.startsWith('Serial.readString()')) {
+        const str = this.serialRxBuffer;
+        this.serialRxBuffer = '';
+        this.stringVarMap.set(varName, str);
+        return;
+      }
+
+      // Serial.readStringUntil(term)
+      const rsuMatch = /^Serial\.readStringUntil\s*\(\s*([^)]+)\s*\)$/.exec(rhs);
+      if (rsuMatch) {
+        const term = rsuMatch[1].trim().replace(/^['"]|['"]$/g, '');
+        const idx = this.serialRxBuffer.indexOf(term);
+        if (idx !== -1) {
+          const str = this.serialRxBuffer.slice(0, idx);
+          this.serialRxBuffer = this.serialRxBuffer.slice(idx + term.length);
+          this.stringVarMap.set(varName, str);
+        } else {
+          const str = this.serialRxBuffer;
+          this.serialRxBuffer = '';
+          this.stringVarMap.set(varName, str);
+        }
+        return;
+      }
+
+      // Serial.parseInt()
+      if (rhs === 'Serial.parseInt()' || rhs.startsWith('Serial.parseInt()')) {
+        const m = /[-+]?\d+/.exec(this.serialRxBuffer);
+        if (m) {
+          const num = parseInt(m[0], 10);
+          this.serialRxBuffer = this.serialRxBuffer.slice(m.index + m[0].length);
+          this.varMap.set(varName, num);
+        } else {
+          this.varMap.set(varName, 0);
+        }
+        return;
+      }
+
+      // Serial.parseFloat()
+      if (rhs === 'Serial.parseFloat()' || rhs.startsWith('Serial.parseFloat()')) {
+        const m = /[-+]?\d*\.?\d+/.exec(this.serialRxBuffer);
+        if (m) {
+          const num = parseFloat(m[0]);
+          this.serialRxBuffer = this.serialRxBuffer.slice(m.index + m[0].length);
+          this.varMap.set(varName, num);
+        } else {
+          this.varMap.set(varName, 0);
+        }
+        return;
+      }
+
+      // Negation: !varName
+      if (rhs.startsWith('!')) {
+        const target = rhs.slice(1).trim();
+        const cur = this.varMap.get(target) ?? 0;
+        this.varMap.set(varName, cur ? 0 : 1);
+        return;
+      }
+
+      // String literal "..."
+      if ((rhs.startsWith('"') && rhs.endsWith('"')) || (rhs.startsWith("'") && rhs.endsWith("'") && rhs.length > 3)) {
+        this.stringVarMap.set(varName, rhs.slice(1, -1));
+        return;
+      }
+
+      // Char literal 'c'
+      if (rhs.startsWith("'") && rhs.endsWith("'") && rhs.length <= 3) {
+        const ch = rhs.slice(1, -1);
+        this.varMap.set(varName, ch.charCodeAt(0));
+        this.stringVarMap.set(varName, ch);
+        return;
+      }
+
+      // Mathematical expression or number
+      const numVal = this.varMap.get(rhs) ?? this.evalMathExpr(rhs);
+      if (numVal !== null) {
+        this.varMap.set(varName, numVal);
+      } else if (this.stringVarMap.has(rhs)) {
+        this.stringVarMap.set(varName, this.stringVarMap.get(rhs)!);
+      }
+      return;
+    }
+
+    // 9. Increment / Decrement
+    const incMatch = /^([A-Za-z0-9_]+)\+\+$/.exec(s);
+    if (incMatch) {
+      this.varMap.set(incMatch[1], (this.varMap.get(incMatch[1]) ?? 0) + 1);
+      return;
+    }
+    const decMatch = /^([A-Za-z0-9_]+)--$/.exec(s);
+    if (decMatch) {
+      this.varMap.set(decMatch[1], (this.varMap.get(decMatch[1]) ?? 0) - 1);
+      return;
+    }
+    const addAssign = /^([A-Za-z0-9_]+)\s*\+=\s*(.+)$/.exec(s);
+    if (addAssign) {
+      const v = addAssign[1];
+      const delta = this.varMap.get(addAssign[2].trim()) ?? this.evalMathExpr(addAssign[2].trim()) ?? 0;
+      this.varMap.set(v, (this.varMap.get(v) ?? 0) + delta);
+      return;
+    }
+
+    // 10. Custom user functions
+    const fnMatch = /^([A-Za-z0-9_]+)\s*\(\s*\)$/.exec(s);
+    if (fnMatch) {
+      const fName = fnMatch[1];
+      if (this.customFunctions.has(fName)) {
+        this.executeBlockStatements(this.customFunctions.get(fName)!);
+      }
+      return;
     }
   }
 
-  private evaluateSerialAndControlBlocks() {
-    if (!this.code.includes('Serial.available') && !this.code.includes('Serial.read')) return;
-    if (this.serialRxBuffer.length === 0) return;
-
-    // Find the Serial available block (supports if or while, Serial.available() > 0, etc.)
-    const availRegex = /(?:if|while)\s*\(\s*Serial\.available\s*\(\s*\)(?:\s*(?:>|>=|!=)\s*0)?\s*\)\s*\{/g;
-    const availMatch = availRegex.exec(this.code);
-    let blockContent = '';
-    if (availMatch) {
-      const startIdx = availMatch.index + availMatch[0].length;
-      let depth = 1;
-      let endIdx = this.code.length;
-      for (let i = startIdx; i < this.code.length; i++) {
-        if (this.code[i] === '{') depth++;
-        else if (this.code[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            endIdx = i;
-            break;
-          }
-        }
-      }
-      blockContent = this.code.slice(startIdx, endIdx);
-    } else {
-      blockContent = this.extractFunctionBody('loop') || this.code;
+  private executeLcdStatement(s: string) {
+    const curMatch = /\.setCursor\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(s);
+    if (curMatch) {
+      this.lcdCursorCol = parseInt(curMatch[1], 10);
+      this.lcdCursorRow = parseInt(curMatch[2], 10);
+      return;
     }
-
-    while (this.serialRxBuffer.length > 0) {
-      const char = this.serialRxBuffer[0];
-      const charCode = this.serialRxBuffer.charCodeAt(0);
-      this.serialRxBuffer = this.serialRxBuffer.slice(1);
-
-      if ((char === '\r' || char === '\n') && !this.code.includes('\\n') && !this.code.includes('\\r')) {
-        continue;
-      }
-
-      // 1. Process variable assignment from Serial.read() e.g. char input = Serial.read();
-      const srMatch = /(?:(?:const\s+)?(?:int|char|byte|uint8_t|short|long|auto)\s+)?([A-Za-z0-9_]+)\s*=\s*Serial\.read\s*\(\s*\)/.exec(blockContent);
-      if (srMatch) {
-        this.varMap.set(srMatch[1], charCode);
-      }
-      this.varMap.set('input', charCode);
-      this.varMap.set('c', charCode);
-      this.varMap.set('val', charCode);
-      this.varMap.set('Serial_read', charCode);
-
-      // 2. Evaluate if / else if / else / switch branches
-      this.evaluateBranchesInBlock(blockContent);
+    if (s.includes('.clear()')) {
+      this.lcdLine1 = '';
+      this.lcdLine2 = '';
+      this.lcdCursorCol = 0;
+      this.lcdCursorRow = 0;
+      this.hooks.onLcdUpdate?.('', '');
+      return;
     }
-  }
-
-  private evaluateBranchesInBlock(blockContent: string) {
-    // Check switch (var) { case ... }
-    const switchMatch = /switch\s*\(([^)]+)\)\s*\{([\s\S]*?)\}/.exec(blockContent);
-    if (switchMatch) {
-      const switchExpr = switchMatch[1].trim();
-      const switchBody = switchMatch[2];
-      const switchVal = this.varMap.get(switchExpr) ?? this.evalMathExpr(switchExpr);
-      if (switchVal !== null && switchVal !== undefined) {
-        const caseRegex = /case\s+([^:]+):([\s\S]*?)(?=case\s+[^:]+:|default\s*:|switch|\}$)/g;
-        let cm;
-        while ((cm = caseRegex.exec(switchBody)) !== null) {
-          const caseRaw = cm[1].trim();
-          const caseStatements = cm[2];
-          let caseVal: number | null = null;
-          if ((caseRaw.startsWith("'") && caseRaw.endsWith("'")) || (caseRaw.startsWith('"') && caseRaw.endsWith('"'))) {
-            caseVal = caseRaw.charCodeAt(1);
-          } else {
-            caseVal = parseInt(caseRaw, 10);
-          }
-          if (caseVal === switchVal) {
-            this.executeControlBlock(caseStatements);
-            return;
-          }
-        }
+    const prMatch = /\.print\s*\(\s*([^)]*)\s*\)/.exec(s);
+    if (prMatch) {
+      const rawArg = prMatch[1].trim();
+      let txt = '';
+      if ((rawArg.startsWith('"') && rawArg.endsWith('"')) || (rawArg.startsWith("'") && rawArg.endsWith("'"))) {
+        txt = rawArg.slice(1, -1);
+      } else if (this.stringVarMap.has(rawArg)) {
+        txt = this.stringVarMap.get(rawArg)!;
+      } else if (this.varMap.has(rawArg)) {
+        txt = String(this.varMap.get(rawArg)!);
+      } else {
+        txt = rawArg;
       }
-    }
-
-    // Parse sequential if / else if / else branches
-    const branchHeaderRegex = /\b(else\s+if|if|else)\b(?:\s*\(([^)]+)\))?\s*\{/g;
-    let bm: RegExpExecArray | null;
-    let matchedInChain = false;
-
-    while ((bm = branchHeaderRegex.exec(blockContent)) !== null) {
-      const type = bm[1].replace(/\s+/, ' ');
-      const condition = bm[2] ? bm[2].trim() : '';
-      const bodyStart = bm.index + bm[0].length;
-      let depth = 1;
-      let bodyEnd = blockContent.length;
-      for (let i = bodyStart; i < blockContent.length; i++) {
-        if (blockContent[i] === '{') depth++;
-        else if (blockContent[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            bodyEnd = i;
-            break;
-          }
-        }
+      if (this.lcdCursorRow === 0) {
+        this.lcdLine1 = this.lcdLine1.slice(0, this.lcdCursorCol) + txt;
+      } else {
+        this.lcdLine2 = this.lcdLine2.slice(0, this.lcdCursorCol) + txt;
       }
-      const body = blockContent.slice(bodyStart, bodyEnd);
-      branchHeaderRegex.lastIndex = bodyEnd + 1;
-
-      if (type === 'if') {
-        matchedInChain = false;
-        const condVal = this.evalCondition(condition);
-        if (condVal === true) {
-          matchedInChain = true;
-          this.executeControlBlock(body);
-        }
-      } else if (type === 'else if') {
-        if (!matchedInChain) {
-          const condVal = this.evalCondition(condition);
-          if (condVal === true) {
-            matchedInChain = true;
-            this.executeControlBlock(body);
-          }
-        }
-      } else if (type === 'else') {
-        if (!matchedInChain) {
-          matchedInChain = true;
-          this.executeControlBlock(body);
-        }
-      }
+      this.hooks.onLcdUpdate?.(this.lcdLine1, this.lcdLine2);
     }
   }
 
@@ -888,33 +1278,50 @@ export class JsInterpreter {
     let c = cond.trim();
 
     // 1. Resolve Serial.available()
-    c = c.replace(/Serial\.available\s*\(\s*\)/g, () => {
-      return String(this.serialRxBuffer.length);
+    c = c.replace(/Serial\.available\s*\(\s*\)/g, String(this.serialRxBuffer.length));
+
+    // 2. Resolve Serial.read() in condition
+    c = c.replace(/Serial\.read\s*\(\s*\)/g, () => {
+      if (this.serialRxBuffer.length > 0) {
+        const code = this.serialRxBuffer.charCodeAt(0);
+        this.serialRxBuffer = this.serialRxBuffer.slice(1);
+        return String(code);
+      }
+      return '-1';
     });
 
-    // 2. Resolve char literals e.g. '1' or "1" -> 49, 'a' -> 97, '0' -> 48
-    c = c.replace(/(?:'([^'\\]|\\.)'|"([^"\\]|\\.)")/g, (_, s1, s2) => {
-      const charStr = s1 || s2;
-      if (charStr === '\\n') return '10';
-      if (charStr === '\\r') return '13';
-      if (charStr === '\\0') return '0';
-      return String(charStr.charCodeAt(0));
+    // 3. Resolve Serial.parseInt() in condition
+    c = c.replace(/Serial\.parseInt\s*\(\s*\)/g, () => {
+      const m = /[-+]?\d+/.exec(this.serialRxBuffer);
+      if (m) {
+        this.serialRxBuffer = this.serialRxBuffer.slice(m.index + m[0].length);
+        return m[0];
+      }
+      return '0';
     });
 
-    // 3. Resolve analogRead calls in condition
+    // 4. Resolve char literals e.g. '1' -> 49, 'a' -> 97, '0' -> 48 (keep double quoted strings intact)
+    c = c.replace(/'([^'\\]|\\.)'/g, (_, s1) => {
+      if (s1 === '\\n') return '10';
+      if (s1 === '\\r') return '13';
+      if (s1 === '\\0') return '0';
+      return String(s1.charCodeAt(0));
+    });
+
+    // 5. Resolve analogRead calls in condition
     c = c.replace(/analogRead\s*\(\s*([A-Za-z0-9_]+)\s*\)/g, (_, p) => {
       const pin = this.resolvePin(p);
       const idx = pin > 13 ? pin - 14 : pin;
       return String(this.hooks.onAnalogRead(idx));
     });
 
-    // 4. Resolve digitalRead calls in condition
+    // 6. Resolve digitalRead calls in condition
     c = c.replace(/digitalRead\s*\(\s*([A-Za-z0-9_]+)\s*\)/g, (_, p) => {
       const pin = this.resolvePin(p);
       return this.hooks.onDigitalRead(pin) ? '1' : '0';
     });
 
-    // 4b. Resolve DHT sensor calls in condition e.g. if (dht.readTemperature() > 30)
+    // 7. Resolve DHT sensor calls in condition e.g. if (dht.readTemperature() > 30)
     c = c.replace(/([A-Za-z0-9_]+)\.readTemperature\s*\(\s*(true|false)?\s*\)/g, (_, _obj, isFahr) => {
       const reading = this.getDhtReading();
       const isF = isFahr === 'true';
@@ -926,23 +1333,33 @@ export class JsInterpreter {
       return String(reading.humidity);
     });
 
-    // 4c. Resolve Serial.available() in condition
-    c = c.replace(/Serial\.available\s*\(\s*\)/g, String(this.serialRxBuffer.length));
-
     c = c.replace(/\bHIGH\b/g, '1').replace(/\bLOW\b/g, '0');
 
-    // 5. Replace variables with their values
+    // 8. Replace string variables for string comparisons
+    for (const [key, strVal] of this.stringVarMap.entries()) {
+      if (this.varMap.has(key)) continue;
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      c = c.replace(regex, JSON.stringify(strVal));
+    }
+
+    // 9. Replace numeric variables with their values
     const sortedKeys = Array.from(this.varMap.keys()).sort((a, b) => b.length - a.length);
     for (const key of sortedKeys) {
       if (key === 'HIGH' || key === 'LOW') continue;
       const val = this.varMap.get(key)!;
+      // Support digit equality e.g. input == 1 when input has ASCII 49 ('1')
+      if (val >= 48 && val <= 57) {
+        const digit = val - 48;
+        const digitPattern = new RegExp(`\\b${key}\\s*==\\s*${digit}\\b`, 'g');
+        c = c.replace(digitPattern, 'true');
+      }
       const regex = new RegExp(`\\b${key}\\b`, 'g');
       c = c.replace(regex, String(val));
     }
 
     // Evaluate logical condition safely
     try {
-      if (/^[0-9.\s+\-*/%()><=!&|-]+$/.test(c)) {
+      if (/^[0-9.\s+\-*/%()><=!&|"'\w]+$/.test(c)) {
         const result = Function(`"use strict"; return Boolean(${c});`)();
         return typeof result === 'boolean' ? result : null;
       }
