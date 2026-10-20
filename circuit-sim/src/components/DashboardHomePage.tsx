@@ -375,7 +375,7 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                 <h1
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: 56,
+                    fontSize: 54,
                     fontWeight: 700,
                     color: '#1F2321',
                     lineHeight: 1.12,
@@ -383,7 +383,7 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                     marginBottom: 22,
                   }}
                 >
-                  Design. Simulate. <span style={{ color: '#E98B5A' }}>Build.</span>
+                  VoltFlow <span style={{ color: '#E98B5A' }}>EDA</span>: Design &amp; Simulate Circuits Online.
                 </h1>
 
                 <p
@@ -392,11 +392,11 @@ export const DashboardHomePage: React.FC<DashboardHomePageProps> = ({
                     color: '#4A524D',
                     lineHeight: 1.65,
                     marginBottom: 36,
-                    maxWidth: 560,
+                    maxWidth: 580,
                     fontWeight: 400,
                   }}
                 >
-                  A modern EDA platform to design circuits, simulate microcontroller firmware, and create professional PCB layouts — all in one place.
+                  <strong>VoltFlow</strong> is a modern online <strong>EDA (Electronic Design Automation)</strong> suite to wire interactive circuits, simulate Arduino &amp; ESP32 C++ firmware in real-time, and export professional PCB layouts — all in your browser.
                 </p>
 
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
