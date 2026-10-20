@@ -164,7 +164,10 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       return <UltrasonicPingRenderer isSelected={isSelected} isRunning={isRunning} distance={props?.distance ?? 15} />;
 
     case 'dht11-sensor':
-      return <DHT11Renderer isSelected={isSelected} />;
+    case 'dht11':
+    case 'dht22':
+    case 'dht22-sensor':
+      return <DHT11Renderer isSelected={isSelected} temperature={props?.temperature ?? 25} humidity={props?.humidity ?? 60} />;
 
     case 'mpu6050':
       return <MPU6050Renderer isSelected={isSelected} isRunning={isRunning} />;
@@ -233,6 +236,9 @@ export function hasCustom2DRenderer(type: string): boolean {
     'lm35',
     'ultrasonic-ping',
     'dht11-sensor',
+    'dht11',
+    'dht22',
+    'dht22-sensor',
     'stepper-motor',
     'esp32-devkit',
     'lcd1602-i2c',
@@ -2840,7 +2846,11 @@ const UltrasonicPingRenderer: React.FC<{ isSelected: boolean; isRunning: boolean
 // DHT11 Horizontal 3-Pin PCB Breakout Module (Exact Match to User Reference Photo)
 // Dimension: 120 × 60 px, Pins on Left: VCC (3, 16), OUT (3, 30), GND (3, 44)
 // ─────────────────────────────────────────────────────────────────────────────
-const DHT11Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
+const DHT11Renderer: React.FC<{ isSelected: boolean; temperature?: number; humidity?: number }> = ({
+  isSelected,
+  temperature = 25,
+  humidity = 60,
+}) => {
   return (
     <svg
       width="120"
@@ -2910,6 +2920,12 @@ const DHT11Renderer: React.FC<{ isSelected: boolean }> = ({ isSelected }) => {
       {/* 5. Center Metallic Circular Mounting Hole */}
       <circle cx="49" cy="30" r="5" fill="#0a0a0a" stroke="#cbd5e1" strokeWidth="1.2" />
       <circle cx="49" cy="30" r="3.5" fill="#050505" />
+
+      {/* Live readout display badges */}
+      <rect x="37" y="6" width="24" height="11" rx="2" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.5" opacity="0.9" />
+      <text x="49" y="14" fill="#f97316" fontSize="5.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">{temperature}°C</text>
+      <rect x="37" y="43" width="24" height="11" rx="2" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.5" opacity="0.9" />
+      <text x="49" y="51" fill="#38bdf8" fontSize="5.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">{humidity}%</text>
 
       {/* 6. Four Soldered Connection Pads (Linking Casing to PCB) */}
       {[13, 24, 36, 47].map((y, i) => (

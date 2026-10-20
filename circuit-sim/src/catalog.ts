@@ -683,6 +683,7 @@ export const COMPONENT_CATALOG: ComponentDefinition[] = [
     category: 'Sensors',
     description: 'Digital temperature & humidity 3-pin breakout sensor module with built-in pullup resistor & power indicator LED.',
     wokwiTag: 'voltflow-dht11',
+    defaultProps: { temperature: 25, humidity: 60 },
     width: 120,
     height: 60,
     estimatedCost: 1.25,

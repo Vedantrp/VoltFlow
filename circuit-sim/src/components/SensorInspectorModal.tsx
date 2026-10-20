@@ -410,22 +410,32 @@ export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
       )}
 
       {/* 7. DHT11 & DHT22 Temperature & Humidity Sensor */}
-      {(type === 'dht11-sensor' || type === 'dht11' || type === 'dht22') && (
+      {(type === 'dht11-sensor' || type === 'dht11' || type === 'dht22' || type === 'dht22-sensor') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#cbd5e1' }}>
             <span>🌡 Temperature:</span>
             <span style={{ color: '#f97316', fontFamily: 'monospace' }}>{props.temperature ?? 25} °C</span>
           </div>
-          <input type="range" min="0" max="50" value={props.temperature ?? 25}
-            onChange={(e) => onUpdateProps(id, { temperature: parseInt(e.target.value, 10) })}
-            style={{ width: '100%', accentColor: '#f97316', cursor: 'pointer' }} />
+          <input
+            type="range"
+            min={type.includes('dht22') ? -40 : 0}
+            max={type.includes('dht22') ? 80 : 50}
+            value={props.temperature ?? 25}
+            onChange={(e) => onUpdateProps(id, { temperature: Number(e.target.value) })}
+            style={{ width: '100%', accentColor: '#f97316', cursor: 'pointer' }}
+          />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginTop: 4 }}>
             <span>💧 Humidity:</span>
             <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{props.humidity ?? 60} %</span>
           </div>
-          <input type="range" min="0" max="100" value={props.humidity ?? 60}
-            onChange={(e) => onUpdateProps(id, { humidity: parseInt(e.target.value, 10) })}
-            style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }} />
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={props.humidity ?? 60}
+            onChange={(e) => onUpdateProps(id, { humidity: Number(e.target.value) })}
+            style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }}
+          />
           <span style={{ fontSize: 10, color: '#94a3b8' }}>
             Heat Index: {Math.round((props.temperature ?? 25) + 0.33 * ((props.humidity ?? 60) / 100 * 6.105) - 4.0).toFixed(1)} °C
           </span>

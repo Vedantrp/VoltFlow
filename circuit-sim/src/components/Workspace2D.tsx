@@ -203,6 +203,17 @@ function getWokwiProps(comp: PlacedComponent, isRunning: boolean): Record<string
         distance: props.distance ?? 15,
       };
 
+    case 'dht11-sensor':
+    case 'dht11':
+    case 'dht22':
+    case 'dht22-sensor':
+      return {
+        ...props,
+        ...state,
+        temperature: props.temperature ?? 25,
+        humidity: props.humidity ?? 60,
+      };
+
     case 'pir-sensor':
       return {
         ...props,

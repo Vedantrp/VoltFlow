@@ -337,6 +337,185 @@ describe('JsInterpreter Unit Tests', () => {
     expect(toneCount).toBeGreaterThan(0);
     interpreter.stop();
   });
+
+  it('evaluates DHT11 temperature & humidity readings, assignments, and Serial output from live slider', () => {
+    const code = `
+      #include <DHT.h>
+      #define DHTPIN 2
+      #define DHTTYPE DHT11
+      DHT dht(DHTPIN, DHTTYPE);
+
+      void setup() {
+        Serial.begin(9600);
+        dht.begin();
+      }
+
+      void loop() {
+        float h = dht.readHumidity();
+        float t = dht.readTemperature();
+        Serial.print("Humidity: ");
+        Serial.print(h);
+        Serial.print("% | Temp: ");
+        Serial.println(t);
+        delay(1000);
+      }
+    `;
+
+    let currentTemp = 28;
+    let currentHum = 75;
+    let serialLogs = '';
+
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: () => {},
+      onDigitalRead: () => false,
+      onAnalogRead: () => 512,
+      onAnalogWrite: () => {},
+      onSerialPrint: (text) => {
+        serialLogs += text;
+      },
+      onDhtRead: (pin) => {
+        expect(pin).toBe(2);
+        return { temperature: currentTemp, humidity: currentHum };
+      },
+    });
+
+    interpreter.start();
+    expect(serialLogs).toContain('Humidity: 75% | Temp: 28');
+
+    // Simulate user adjusting DHT11 slider in the inspector
+    currentTemp = 36;
+    currentHum = 42;
+    serialLogs = '';
+
+    // Run tick with new slider values
+    interpreter['tick']();
+    interpreter['emitSerial']();
+    expect(serialLogs).toContain('Humidity: 42% | Temp: 36');
+
+    interpreter.stop();
+  });
+
+  it('evaluates LCD output with DHT temperature and humidity precision formatting', () => {
+    const code = `
+      #include <DHT.h>
+      DHT dht(2, DHT11);
+      void setup() {
+        lcd.begin();
+      }
+      void loop() {
+        float t = dht.readTemperature();
+        float h = dht.readHumidity();
+        lcd.setCursor(0, 0);
+        lcd.print("Temp: ");
+        lcd.print(t, 1);
+        lcd.setCursor(0, 1);
+        lcd.print("Hum:  ");
+        lcd.print(h, 0);
+      }
+    `;
+
+    let lcdL1 = '';
+    let lcdL2 = '';
+
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: () => {},
+      onDigitalRead: () => false,
+      onAnalogRead: () => 512,
+      onAnalogWrite: () => {},
+      onLcdUpdate: (l1, l2) => {
+        lcdL1 = l1;
+        lcdL2 = l2;
+      },
+      onSerialPrint: () => {},
+      onDhtRead: () => ({ temperature: 24.3, humidity: 62.8 }),
+    });
+
+    interpreter.start();
+    expect(lcdL1).toContain('Temp: 24.3');
+    expect(lcdL2).toContain('Hum:  63');
+    interpreter.stop();
+  });
+
+  it('handles interactive Serial control with if (Serial.available() > 0) and char input', () => {
+    const code = `
+      #define LED_PIN D3
+
+      void setup() {
+        pinMode(LED_PIN, OUTPUT);
+        digitalWrite(LED_PIN, LOW);
+
+        Serial.begin(9600);
+        Serial.println("Enter 1 to turn LED ON");
+        Serial.println("Enter 0 to turn LED OFF");
+      }
+
+      void loop() {
+        if (Serial.available() > 0) {
+          char input = Serial.read();
+
+          if (input == '1') {
+            digitalWrite(LED_PIN, HIGH);
+            Serial.println("LED ON");
+            delay(2000);
+          }
+          else if (input == '0') {
+            digitalWrite(LED_PIN, LOW);
+            Serial.println("LED OFF");
+          }
+        }
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    let serialLogs = '';
+
+    const interpreter = new JsInterpreter(code, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => {
+        pinStates[pin] = high;
+      },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 512,
+      onAnalogWrite: () => {},
+      onSerialPrint: (text) => {
+        serialLogs += text;
+      },
+    });
+
+    interpreter.start();
+    // Setup ran: LED_PIN (D3 -> pin 3) initialized to LOW
+    expect(pinStates[3]).toBe(false);
+    expect(serialLogs).toContain('Enter 1 to turn LED ON\nEnter 0 to turn LED OFF\n');
+
+    // Clear logs to simulate user clearing or waiting
+    serialLogs = '';
+
+    // Run tick - verify setup is not spammed again and pin 3 remains LOW
+    interpreter['tick']();
+    expect(serialLogs).toBe('');
+    expect(pinStates[3]).toBe(false);
+
+    // User types '1' and sends
+    interpreter.receiveSerialInput('1\n');
+    expect(pinStates[3]).toBe(true);
+    expect(serialLogs).toContain('LED ON\n');
+
+    // Run additional ticks to ensure pin 3 is NOT overridden back to LOW by loop
+    serialLogs = '';
+    interpreter['tick']();
+    interpreter['tick']();
+    expect(pinStates[3]).toBe(true);
+    expect(serialLogs).toBe(''); // no spam!
+
+    // User types '0' and sends
+    interpreter.receiveSerialInput('0\n');
+    expect(pinStates[3]).toBe(false);
+    expect(serialLogs).toContain('LED OFF\n');
+
+    interpreter.stop();
+  });
 });
 
 

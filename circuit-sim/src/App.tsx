@@ -562,6 +562,47 @@ export default function App() {
           serialBufferRef.current += text;
           appendSerialText(text);
         },
+        onDhtRead: (pin) => {
+          if (!simulationActiveRef.current) return { temperature: 25, humidity: 60 };
+          const liveComps = useCircuitStore.getState().components;
+          const liveWires = useCircuitStore.getState().wires;
+          const activeMcu =
+            liveComps.find(
+              (c) => c.type === 'arduino-uno' || c.type === 'arduino-nano' || c.type === 'esp32-devkit' || c.type === 'nodemcu-esp8266'
+            ) || mcuComp;
+
+          // 1. If a pin is specified, check if a DHT sensor is wired to that pin
+          if (pin !== undefined && activeMcu) {
+            const pinStr = String(pin);
+            const wiredDht = liveComps.find((c) => {
+              if (c.type !== 'dht11-sensor' && c.type !== 'dht11' && c.type !== 'dht22' && c.type !== 'dht22-sensor') return false;
+              return liveWires.some(
+                (w) =>
+                  (w.fromComponentId === activeMcu.id && (w.fromPinId === pinStr || w.fromPinId === `D${pinStr}`) && w.toComponentId === c.id) ||
+                  (w.toComponentId === activeMcu.id && (w.toPinId === pinStr || w.toPinId === `D${pinStr}`) && w.fromComponentId === c.id)
+              );
+            });
+            if (wiredDht) {
+              return {
+                temperature: Number(wiredDht.props?.temperature ?? 25),
+                humidity: Number(wiredDht.props?.humidity ?? 60),
+              };
+            }
+          }
+
+          // 2. Fallback to any DHT sensor on the board
+          const anyDht = liveComps.find(
+            (c) => c.type === 'dht11-sensor' || c.type === 'dht11' || c.type === 'dht22' || c.type === 'dht22-sensor'
+          );
+          if (anyDht) {
+            return {
+              temperature: Number(anyDht.props?.temperature ?? 25),
+              humidity: Number(anyDht.props?.humidity ?? 60),
+            };
+          }
+
+          return { temperature: 25, humidity: 60 };
+        },
       });
 
       if (!simulationActiveRef.current) {
@@ -744,7 +785,10 @@ export default function App() {
           isCompiling={isCompiling}
           compileError={compileError}
           serialText={serialText}
-          onClearSerial={() => setSerialText('')}
+          onClearSerial={() => {
+            serialBufferRef.current = '';
+            setSerialText('');
+          }}
           onSendSerialInput={handleSendSerialInput}
         />
 
