@@ -1689,49 +1689,88 @@ export class JsInterpreter {
       }
     }
 
-    // 3. Parse step calls & delays: e.g. myStepper.step(steps); delay(2000);
+    // 3. Parse step calls & delays: e.g. myStepper.step(200); delay(500); myStepper.step(-200); delay(500);
     const stepRegex = /([A-Za-z0-9_]+)\.step\s*\(\s*([^)]+)\s*\)/g;
+    const stepMatches: { keyName: string; stepVal: number; index: number }[] = [];
     let stepm;
     while ((stepm = stepRegex.exec(this.code)) !== null) {
       const keyName = stepm[1].trim().toLowerCase();
       const expr = stepm[2].trim();
-      let stepVal = this.varMap.get(expr) ?? this.evalMathExpr(expr) ?? parseFloat(expr) ?? 2048;
-      if (isNaN(stepVal)) stepVal = 2048;
+      let stepVal = this.varMap.get(expr) ?? this.evalMathExpr(expr) ?? parseFloat(expr) ?? 200;
+      if (isNaN(stepVal)) stepVal = 200;
+      stepMatches.push({ keyName, stepVal, index: stepm.index });
+    }
 
+    if (stepMatches.length === 0) return;
+
+    // Find default delay
+    const delayMatch = this.code.match(/delay\s*\(\s*(\d+)\s*\)/);
+    const defaultDelayMs = delayMatch ? parseInt(delayMatch[1], 10) : 500;
+
+    // Calculate segments for each step in sequence
+    let totalCycleTimeMs = 0;
+    const segments: { keyName: string; stepVal: number; startAngle: number; endAngle: number; startTimeMs: number; moveDurationMs: number; endTimeMs: number }[] = [];
+    let runningAngle = 0;
+
+    for (const sm of stepMatches) {
       const st =
-        this.stepperInstances.get(keyName) ||
+        this.stepperInstances.get(sm.keyName) ||
         (this.stepperInstances.size > 0 ? Array.from(this.stepperInstances.values())[0] : null);
 
-      const delayMatch = this.code.match(/delay\s*\(\s*(\d+)\s*\)/);
-      const delayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
-
       const rpm = st ? Math.max(1, st.speedRpm) : 60;
-      const stepsPerRev = st ? st.stepsPerRev : 2048;
+      const stepsPerRev = st ? st.stepsPerRev : 200;
 
-      // Speed in degrees/sec: (RPM * 360) / 60 = RPM * 6
-      const degreesPerSec = rpm * 6;
-      const totalDegrees = (stepVal / stepsPerRev) * 360;
-      const motionTimeMs = (Math.abs(totalDegrees) / degreesPerSec) * 1000;
-      const totalCycleMs = motionTimeMs + delayMs;
+      const degreesPerSec = rpm * 6; // (RPM * 360) / 60
+      const totalDegrees = (sm.stepVal / stepsPerRev) * 360;
+      const moveDurationMs = Math.max(50, (Math.abs(totalDegrees) / degreesPerSec) * 1000);
+      const segmentTotalMs = moveDurationMs + defaultDelayMs;
 
-      const cycleProgress = elapsed % Math.max(100, totalCycleMs);
+      const startAngle = runningAngle;
+      const endAngle = runningAngle + totalDegrees;
+      runningAngle = endAngle;
 
-      let calculatedAngle: number;
-      if (cycleProgress < motionTimeMs) {
-        // Motor is actively rotating
-        const motionProgress = cycleProgress / motionTimeMs;
-        calculatedAngle = (motionProgress * totalDegrees) % 360;
-      } else {
-        // Motor is paused during delay period
-        calculatedAngle = totalDegrees % 360;
-      }
+      segments.push({
+        keyName: sm.keyName,
+        stepVal: sm.stepVal,
+        startAngle,
+        endAngle,
+        startTimeMs: totalCycleTimeMs,
+        moveDurationMs,
+        endTimeMs: totalCycleTimeMs + segmentTotalMs,
+      });
 
-      const finalAngle = (calculatedAngle + 360) % 360;
-      if (st) {
-        st.currentAngle = finalAngle;
-      }
-      this.hooks.onStepperStep?.(stepVal, rpm, finalAngle);
+      totalCycleTimeMs += segmentTotalMs;
     }
+
+    const cycleProgress = elapsed % Math.max(100, totalCycleTimeMs);
+
+    // Find active segment
+    let calculatedAngle = runningAngle;
+    let activeRpm = 60;
+    let activeStepVal = stepMatches[0].stepVal;
+
+    for (const seg of segments) {
+      if (cycleProgress >= seg.startTimeMs && cycleProgress < seg.endTimeMs) {
+        activeStepVal = seg.stepVal;
+        const st = this.stepperInstances.get(seg.keyName);
+        if (st) activeRpm = st.speedRpm;
+
+        const timeInSeg = cycleProgress - seg.startTimeMs;
+        if (timeInSeg < seg.moveDurationMs) {
+          const progress = timeInSeg / seg.moveDurationMs;
+          calculatedAngle = seg.startAngle + progress * (seg.endAngle - seg.startAngle);
+        } else {
+          calculatedAngle = seg.endAngle;
+        }
+        break;
+      }
+    }
+
+    const finalAngle = ((calculatedAngle % 360) + 360) % 360;
+    for (const st of this.stepperInstances.values()) {
+      st.currentAngle = finalAngle;
+    }
+    this.hooks.onStepperStep?.(activeStepVal, activeRpm, finalAngle);
   }
 
   private evaluateLcdWrites() {

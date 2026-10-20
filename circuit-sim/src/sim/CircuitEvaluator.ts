@@ -3,6 +3,7 @@ import type { PlacedComponent, WireConnection } from '../types';
 
 export class CircuitEvaluator {
   private graph: WiringGraph;
+  private stepperStates: Map<string, { lastPhase: number; step: number; angle: number }> = new Map();
 
   constructor() {
     this.graph = new WiringGraph();
@@ -388,9 +389,58 @@ export class CircuitEvaluator {
           const currentAngle = comp.state?.angle ?? comp.props?.angle ?? 90;
           updateState(comp.id, { angle: currentAngle });
         } else if (comp.type === 'stepper-motor') {
-          const currentAngle = comp.state?.angle ?? comp.props?.angle ?? 0;
-          const currentStep = comp.state?.step ?? comp.props?.step ?? 0;
-          updateState(comp.id, { angle: currentAngle, step: currentStep });
+          // Read 4 coil lines (A+, A-, B+, B- or IN1, IN2, IN3, IN4 if driven directly or via ULN2003)
+          const aPos = this.graph.read(`${comp.id}:A+`) || this.graph.read(`${comp.id}:IN1`) || false;
+          const aNeg = this.graph.read(`${comp.id}:A-`) || this.graph.read(`${comp.id}:IN2`) || false;
+          const bPos = this.graph.read(`${comp.id}:B+`) || this.graph.read(`${comp.id}:IN3`) || false;
+          const bNeg = this.graph.read(`${comp.id}:B-`) || this.graph.read(`${comp.id}:IN4`) || false;
+
+          let stepperRec = this.stepperStates.get(comp.id);
+          if (!stepperRec) {
+            stepperRec = {
+              lastPhase: -1,
+              step: comp.state?.step ?? comp.props?.step ?? 0,
+              angle: comp.state?.angle ?? comp.props?.angle ?? 0,
+            };
+            this.stepperStates.set(comp.id, stepperRec);
+          }
+
+          // Determine energized coil step phase (0-3 for 4-step sequence)
+          let currentPhase = -1;
+          if (aPos && !aNeg && !bPos && !bNeg) currentPhase = 0;
+          else if (!aPos && !aNeg && bPos && !bNeg) currentPhase = 1;
+          else if (!aPos && aNeg && !bPos && !bNeg) currentPhase = 2;
+          else if (!aPos && !aNeg && !bPos && bNeg) currentPhase = 3;
+          // Also handle 2-phase on (full-step higher torque):
+          else if (aPos && bPos) currentPhase = 0.5;
+          else if (bPos && aNeg) currentPhase = 1.5;
+          else if (aNeg && bNeg) currentPhase = 2.5;
+          else if (bNeg && aPos) currentPhase = 3.5;
+
+          if (currentPhase !== -1 && currentPhase !== stepperRec.lastPhase) {
+            if (stepperRec.lastPhase !== -1) {
+              const diff = (currentPhase - stepperRec.lastPhase + 4) % 4;
+              if (diff === 1 || diff === 0.5) {
+                stepperRec.step += 1;
+                stepperRec.angle = (stepperRec.angle + 1.8) % 360;
+              } else if (diff === 3 || diff === 3.5) {
+                stepperRec.step -= 1;
+                stepperRec.angle = (stepperRec.angle - 1.8 + 360) % 360;
+              }
+            }
+            stepperRec.lastPhase = currentPhase;
+          }
+
+          const currentAngle = comp.state?.angle ?? stepperRec.angle;
+          const currentStep = comp.state?.step ?? stepperRec.step;
+          updateState(comp.id, {
+            angle: currentAngle,
+            step: currentStep,
+            coilA_pos: aPos,
+            coilA_neg: aNeg,
+            coilB_pos: bPos,
+            coilB_neg: bNeg,
+          });
         } else if (comp.type === 'ir-sensor') {
           const isObstacle = comp.props?.obstacleDetected === true || (comp.props?.distance !== undefined && comp.props.distance <= 10);
           // Standard FC-51 IR obstacle sensor module outputs LOW (0V) when obstacle is detected, HIGH (5V) when clear
