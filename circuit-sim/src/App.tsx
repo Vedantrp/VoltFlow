@@ -433,15 +433,17 @@ export default function App() {
     ) || components[0];
 
     try {
-      if (typeof window !== 'undefined' && window.location.protocol === 'https:' && COMPILE_ENDPOINT.includes('localhost')) {
-        throw new Error('Local compiler unavailable on HTTPS public deployment. Falling back to in-browser engine.');
+      // If deployed publicly on HTTPS, or if in development without local gcc compile backend, use fast in-browser simulation engine
+      const isPublic = typeof window !== 'undefined' && (window.location.protocol === 'https:' || !COMPILE_ENDPOINT.includes('localhost'));
+      if (isPublic && COMPILE_ENDPOINT.includes('localhost')) {
+        throw new Error('Using in-browser simulation engine');
       }
 
       const res = await fetch(COMPILE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: code }),
-        signal: AbortSignal.timeout(300),
+        signal: AbortSignal.timeout(200),
       });
 
       if (!simulationActiveRef.current) return;
