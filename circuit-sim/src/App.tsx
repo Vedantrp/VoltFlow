@@ -449,6 +449,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (!simulationActiveRef.current) return;
+        if (!data || !data.hex) {
+          throw new Error('No binary hex returned from compile server');
+        }
         const runner = new AvrRunner(data.hex, {
           onPinChange: (pin, isHigh) => {
             if (!simulationActiveRef.current) return;

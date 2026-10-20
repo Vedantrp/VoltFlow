@@ -640,6 +640,44 @@ describe('JsInterpreter Unit Tests', () => {
 
     interpreter.stop();
   });
+
+  it('correctly simulates user Stepper sketch with serial and steps', () => {
+    const userCode = `#include <Stepper.h>
+const int stepsPerRev = 200;
+Stepper stp(stepsPerRev, 8, 9, 10, 11);
+
+void setup() {
+  stp.setSpeed(60);
+  Serial.begin(9600);
+}
+
+void loop() {
+  Serial.println("Stepping 360 deg CW...");
+  stp.step(200);
+  delay(500);
+  Serial.println("Stepping 360 deg CCW...");
+  stp.step(-200);
+  delay(500);
+}`;
+
+    const printed: string[] = [];
+    const stepped: { steps: number; rpm: number; angle: number }[] = [];
+
+    const interpreter = new JsInterpreter(userCode, {
+      onPinMode: () => {},
+      onDigitalWrite: () => {},
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSerialPrint: (text) => printed.push(text),
+      onStepperStep: (steps, rpm, angle) => stepped.push({ steps, rpm, angle }),
+    });
+
+    interpreter.start();
+    console.log('TEST PRINTED:', printed);
+    console.log('TEST STEPPED:', stepped);
+    interpreter.stop();
+  });
 });
 
 

@@ -122,11 +122,13 @@ export class JsInterpreter {
     this.sequenceSteps = [];
     this.totalSequenceDuration = 0;
 
-    // Preserve dynamic evaluation for interactive sensor reads, Servo sweeps, and Serial control
+    // Preserve dynamic evaluation for interactive sensor reads, Servo sweeps, Stepper motors, and Serial control
     if (
       this.serialControlledPins.size > 0 ||
       this.code.includes('Servo') ||
       this.code.includes('.write(') ||
+      this.code.includes('Stepper') ||
+      this.code.includes('.step(') ||
       this.code.includes('analogRead(') ||
       this.code.includes('digitalRead(') ||
       this.code.includes('DHT') ||
