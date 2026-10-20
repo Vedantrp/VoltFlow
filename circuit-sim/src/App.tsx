@@ -17,6 +17,7 @@ import { DashboardHomePage } from './components/DashboardHomePage';
 import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { TermsConditionsPage } from './components/TermsConditionsPage';
 import { authService } from './services/authService';
+import { CIRCUIT_TEMPLATES } from './data/circuitTemplates';
 import type { UserProfile, SavedProject } from './types';
 
 import { useCircuitStore } from './store/useCircuitStore';
@@ -145,6 +146,8 @@ export default function App() {
 
   // Multi-Page View Routing State
   const getInitialView = (): 'home' | 'simulator' | 'privacy' | 'terms' => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('circuit') || params.get('c')) return 'simulator';
     const hash = window.location.hash.toLowerCase();
     if (hash === '#privacy') return 'privacy';
     if (hash === '#terms') return 'terms';
@@ -153,6 +156,7 @@ export default function App() {
   };
 
   const [currentView, setCurrentView] = useState<'home' | 'simulator' | 'privacy' | 'terms'>(getInitialView);
+  const [isCopiedShare, setIsCopiedShare] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -266,6 +270,72 @@ export default function App() {
       setCurrentProjectId(undefined);
     }
   }, [setCircuitName, loadCircuit, currentUser, handleCreateNewProject]);
+
+  // Load Circuit from URL query (?circuit=id or ?c=encodedData) for direct SEO landing pages and shared circuits
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const circuitId = params.get('circuit');
+      const encodedCircuit = params.get('c');
+
+      if (circuitId) {
+        const found = CIRCUIT_TEMPLATES.find((t) => t.id === circuitId);
+        if (found) {
+          setCircuitName(found.name);
+          loadCircuit(found.components, found.wires || [], found.code || '');
+          document.title = `${found.name} | VoltFlow Circuit Simulator`;
+          return;
+        }
+      }
+
+      if (encodedCircuit) {
+        const jsonStr = decodeURIComponent(atob(encodedCircuit));
+        const data = JSON.parse(jsonStr);
+        if (data.components && data.wires) {
+          setCircuitName(data.circuitName || 'Shared Circuit');
+          loadCircuit(data.components, data.wires, data.code || '');
+          document.title = `${data.circuitName || 'Shared Circuit'} | VoltFlow Circuit Simulator`;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not parse circuit from URL parameters:', e);
+    }
+  }, [setCircuitName, loadCircuit]);
+
+  // Share Circuit Handler: Generates lightweight base64 share link or template URL
+  const handleShareCircuit = useCallback(() => {
+    try {
+      const activeTemplate = CIRCUIT_TEMPLATES.find(
+        (t) => t.name.trim().toLowerCase() === circuitName.trim().toLowerCase()
+      );
+
+      let shareUrl = `${window.location.origin}/#simulator`;
+      if (activeTemplate) {
+        shareUrl = `${window.location.origin}/?circuit=${activeTemplate.id}#simulator`;
+      } else {
+        const payload = JSON.stringify({
+          circuitName,
+          components,
+          wires,
+          code,
+        });
+        const encoded = btoa(encodeURIComponent(payload));
+        // Keep within safe URL length limit
+        if (encoded.length < 3500) {
+          shareUrl = `${window.location.origin}/?c=${encoded}#simulator`;
+        } else {
+          shareUrl = `${window.location.origin}/#simulator`;
+        }
+      }
+
+      navigator.clipboard.writeText(shareUrl);
+      setIsCopiedShare(true);
+      setTimeout(() => setIsCopiedShare(false), 2500);
+    } catch (err) {
+      console.error('Failed to copy share link:', err);
+      prompt('Copy your circuit share link:', window.location.href);
+    }
+  }, [circuitName, components, wires, code]);
 
   const runnerRef = useRef<AvrRunner | null>(null);
   const jsInterpreterRef = useRef<JsInterpreter | null>(null);
@@ -749,6 +819,8 @@ export default function App() {
         onNavigateHome={() => navigateToView('home')}
         onNavigatePrivacy={() => navigateToView('privacy')}
         onNavigateTerms={() => navigateToView('terms')}
+        onShareCircuit={handleShareCircuit}
+        isCopiedShare={isCopiedShare}
       />
 
       {/* Main Workspace Area */}

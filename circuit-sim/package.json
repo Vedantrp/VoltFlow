@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "vite build",
+    "build": "node generate-sitemap.cjs && vite build",
+    "generate:sitemap": "node generate-sitemap.cjs",
     "typecheck": "tsc -b",
     "lint": "oxlint src",
     "test": "vitest run",

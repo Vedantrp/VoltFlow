@@ -25,6 +25,8 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Share2,
+  Check,
 } from 'lucide-react';
 import type { TinkercadWireColor, WireType, UserProfile } from '../types';
 
@@ -67,6 +69,8 @@ interface BillionDollarTopBarProps {
   onNavigateHome?: () => void;
   onNavigatePrivacy?: () => void;
   onNavigateTerms?: () => void;
+  onShareCircuit?: () => void;
+  isCopiedShare?: boolean;
 }
 
 const WIRE_COLORS: { id: TinkercadWireColor; hex: string; name: string }[] = [
@@ -117,6 +121,8 @@ export const BillionDollarTopBar: React.FC<BillionDollarTopBarProps> = ({
   onNavigateHome,
   onNavigatePrivacy,
   onNavigateTerms,
+  onShareCircuit,
+  isCopiedShare,
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -381,6 +387,26 @@ export const BillionDollarTopBar: React.FC<BillionDollarTopBarProps> = ({
         >
           <Cpu size={14} color="#2563eb" /> PCB
         </button>
+
+        {/* Share Circuit Link (Viral Growth & Forum Sharing) */}
+        {onShareCircuit && (
+          <button
+            onClick={onShareCircuit}
+            className="btn btn-secondary"
+            title="Copy shareable link to this circuit"
+            aria-label="Share Circuit"
+            style={{
+              gap: 6,
+              color: isCopiedShare ? '#10b981' : '#1e293b',
+              borderColor: isCopiedShare ? '#10b981' : '#cbd5e1',
+              backgroundColor: isCopiedShare ? '#ecfdf5' : '#ffffff',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isCopiedShare ? <Check size={14} color="#10b981" /> : <Share2 size={14} color="#0284c7" />}
+            <span>{isCopiedShare ? 'Link Copied!' : 'Share'}</span>
+          </button>
+        )}
 
         {/* Export JSON */}
         <button onClick={onSaveFile} className="btn btn-icon" title="Export circuit as JSON file" aria-label="Export circuit JSON">
