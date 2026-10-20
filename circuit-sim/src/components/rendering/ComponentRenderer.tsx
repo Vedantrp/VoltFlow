@@ -109,8 +109,10 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       return <CapacitorCeramicRenderer isSelected={isSelected} />;
 
     case 'lcd1602':
+      return <LCD1602Renderer isSelected={isSelected} isRunning={isRunning} isI2C={false} text={state?.text || props?.text || 'VoltFlow Studio'} />;
+
     case 'lcd1602-i2c':
-      return <LCD1602Renderer isSelected={isSelected} isRunning={isRunning} text={state?.text || props?.text || 'VoltFlow Studio'} />;
+      return <LCD1602Renderer isSelected={isSelected} isRunning={isRunning} isI2C={true} text={state?.text || props?.text || 'VoltFlow Studio'} />;
 
     case 'esp-01':
       return <ESP01Renderer isSelected={isSelected} isRunning={isRunning} />;
@@ -2098,9 +2100,15 @@ const CapacitorCeramicRenderer: React.FC<{ isSelected: boolean }> = ({ isSelecte
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 18. LCD 1602 DISPLAY (Tinkercad-Exact Blue Backlit Character Matrix)
-// Dimension: 230 × 110 px, Pins: GND (4, 98), VCC (14, 98), SDA (24, 98), SCL (34, 98)
+// Parallel: 16-pin HD44780 header along top (VSS, VDD, V0, RS, RW, E, D0-D7, A, K)
+// I2C Backpack: 4-pin header at bottom left (GND, VCC, SDA, SCL)
 // ─────────────────────────────────────────────────────────────────────────────
-const LCD1602Renderer: React.FC<{ isSelected: boolean; isRunning: boolean; text: string }> = ({ isSelected, isRunning, text }) => {
+const LCD1602Renderer: React.FC<{ isSelected: boolean; isRunning: boolean; isI2C?: boolean; text: string }> = ({
+  isSelected,
+  isRunning,
+  isI2C = false,
+  text,
+}) => {
   return (
     <svg
       width="230"
@@ -2122,14 +2130,14 @@ const LCD1602Renderer: React.FC<{ isSelected: boolean; isRunning: boolean; text:
       <circle cx="222" cy="98" r="3" fill="#ca8a04" />
 
       {/* Black Metal Screen Bezel */}
-      <rect x="22" y="16" width="186" height="74" rx="3" fill="#09090b" stroke="#27272a" strokeWidth="1.2" />
+      <rect x="22" y="18" width="186" height="72" rx="3" fill="#09090b" stroke="#27272a" strokeWidth="1.2" />
 
       {/* Blue Backlit LCD Glass */}
       <rect
         x="32"
-        y="24"
+        y="25"
         width="166"
-        height="58"
+        height="56"
         rx="2"
         fill={isRunning ? '#1d4ed8' : '#0f172a'}
         stroke="#1e3a8a"
@@ -2152,14 +2160,34 @@ const LCD1602Renderer: React.FC<{ isSelected: boolean; isRunning: boolean; text:
         </text>
       )}
 
-      {/* 4-Pin I2C Header at bottom left (GND 4, VCC 14, SDA 24, SCL 34 at y: 98) */}
-      {[4, 14, 24, 34].map((px, i) => (
-        <g key={i}>
-          <rect x={px - 2.5} y="92" width="5" height="12" rx="1" fill="#18181b" stroke="#3f3f46" strokeWidth="0.8" />
-          <circle cx={px} cy="98" r="1.8" fill="#ca8a04" />
-        </g>
-      ))}
-      <text x="4" y="90" fill="#ffffff" fontSize="4.5" fontWeight="800">I2C</text>
+      {isI2C ? (
+        <>
+          {/* 4-Pin I2C Header at bottom left (GND 4, VCC 14, SDA 24, SCL 34 at y: 98) */}
+          {[4, 14, 24, 34].map((px, i) => (
+            <g key={i}>
+              <rect x={px - 2.5} y="92" width="5" height="12" rx="1" fill="#18181b" stroke="#3f3f46" strokeWidth="0.8" />
+              <circle cx={px} cy="98" r="1.8" fill="#ca8a04" />
+            </g>
+          ))}
+          <text x="4" y="90" fill="#facc15" fontSize="5" fontWeight="800">I2C (PCF8574)</text>
+        </>
+      ) : (
+        <>
+          {/* 16-Pin HD44780 Parallel Header along top (x: 25 to 205 at y: 10) */}
+          {Array.from({ length: 16 }).map((_, i) => {
+            const px = 25 + i * 12;
+            return (
+              <g key={i}>
+                <rect x={px - 2.5} y="4" width="5" height="12" rx="1" fill="#18181b" stroke="#3f3f46" strokeWidth="0.8" />
+                <circle cx={px} cy="10" r="1.8" fill="#ca8a04" />
+              </g>
+            );
+          })}
+          <text x="25" y="16" fill="#a1a1aa" fontSize="4" fontWeight="700">1:VSS</text>
+          <text x="195" y="16" fill="#a1a1aa" fontSize="4" fontWeight="700">16:K</text>
+          <text x="96" y="16" fill="#38bdf8" fontSize="4.5" fontWeight="800">HD44780 PARALLEL</text>
+        </>
+      )}
     </svg>
   );
 };

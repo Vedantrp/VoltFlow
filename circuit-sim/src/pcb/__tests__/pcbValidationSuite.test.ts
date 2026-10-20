@@ -251,7 +251,7 @@ describe('4. Permanent VoltFlow Validation Suite — 8 Standard Benchmark Circui
   it('Circuit 4 — Sensor: validates I2C bus and power line segregation', () => {
     const components: PlacedComponent[] = [
       { id: 'u1', type: 'arduino-nano', name: 'Nano', x: 20, y: 20, rotation: 0, props: {} },
-      { id: 'lcd', type: 'lcd1602', name: 'LCD', x: 140, y: 20, rotation: 0, props: {} },
+      { id: 'lcd', type: 'lcd1602-i2c', name: 'LCD', x: 140, y: 20, rotation: 0, props: {} },
     ];
     const wires: WireConnection[] = [
       { id: 'w1', fromComponentId: 'u1', fromPinId: '5V', toComponentId: 'lcd', toPinId: 'VCC', color: 'red' },

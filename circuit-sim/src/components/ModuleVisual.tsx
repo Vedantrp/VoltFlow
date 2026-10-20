@@ -2061,8 +2061,9 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
     );
   }
 
-  // 34. LCD 16x2 with I2C Backpack
+  // 34. LCD 16x2 Display (Parallel or I2C Backpack)
   if (type === 'lcd1602-i2c' || type === 'lcd1602') {
+    const isI2C = type === 'lcd1602-i2c';
     const rawText = comp?.state?.text || comp?.props?.text;
     const splitText = typeof rawText === 'string' ? rawText.split('\n') : [];
     const line1 = comp?.state?.line1 ?? comp?.props?.line1 ?? splitText[0] ?? 'VoltFlow Studio';
@@ -2070,7 +2071,7 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
 
     return (
       <div
-        aria-label="LCD 16x2 Display"
+        aria-label={isI2C ? "16x2 I2C LCD Display" : "16x2 Parallel LCD Display"}
         role="img"
         style={{
           position: 'relative',
@@ -2088,11 +2089,20 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
           userSelect: 'none',
         }}
       >
+        {/* If parallel, show top header pin indicator */}
+        {!isI2C && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '94%', fontSize: 5.5, fontWeight: 700, color: '#bbf7d0' }}>
+            <span>1:VSS</span>
+            <span>HD44780 (16-Pin)</span>
+            <span>16:K</span>
+          </div>
+        )}
+
         {/* Blue Backlight Screen Glass */}
         <div
           style={{
             width: '92%',
-            height: '75%',
+            height: isI2C ? '75%' : '65%',
             backgroundColor: isRunning ? '#1d4ed8' : '#1e3a8a',
             borderRadius: 4,
             border: '2px solid #0f172a',
@@ -2109,13 +2119,19 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>{line2}</div>
         </div>
 
-        {/* 4-Pin I2C Header Silkscreen at bottom */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '92%', gap: 10, fontSize: 6.5, fontWeight: 900, color: '#fef08a' }}>
-          <span>GND</span>
-          <span>VCC</span>
-          <span>SDA</span>
-          <span>SCL</span>
-        </div>
+        {/* Silkscreen Pin Labels */}
+        {isI2C ? (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '92%', gap: 10, fontSize: 6.5, fontWeight: 900, color: '#fef08a' }}>
+            <span>GND</span>
+            <span>VCC</span>
+            <span>SDA</span>
+            <span>SCL</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', width: '92%', fontSize: 6, fontWeight: 800, color: '#fef08a' }}>
+            RS • EN • D4-D7 Parallel Bus
+          </div>
+        )}
       </div>
     );
   }

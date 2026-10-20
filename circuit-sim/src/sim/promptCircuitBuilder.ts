@@ -149,7 +149,7 @@ function addStepperMotor(ctx: BuildContext) {
 }
 
 function addLcd1602(ctx: BuildContext) {
-  const lcdId = addComponent(ctx, 'lcd1602', 'LCD Display 16x2', { text: 'Ready' });
+  const lcdId = addComponent(ctx, 'lcd1602-i2c', '16x2 I2C LCD Display', { text: 'Ready' });
   addPower(ctx, lcdId);
   addWire(ctx, ctx.controllerId, ctx.controller.sdaPin, lcdId, 'SDA', 'blue');
   addWire(ctx, ctx.controllerId, ctx.controller.sclPin, lcdId, 'SCL', 'blue');
