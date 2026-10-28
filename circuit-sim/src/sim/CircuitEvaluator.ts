@@ -339,7 +339,7 @@ export class CircuitEvaluator {
           const isSpinning = posVal === true && posDriven && negVal !== true;
           updateState(comp.id, { active: isSpinning, spinning: isSpinning, speed: isSpinning ? 100 : 0 });
         } else if (comp.type === 'seven-segment' || comp.type === 'segment-7' || comp.type === 'segment-7-anode') {
-          // Check COM connections
+          // Check COM connections (bottom COM or top COM2)
           const comVal = this.graph.read(`${comp.id}:COM`) ?? this.graph.read(`${comp.id}:COM2`);
           const comDriven = this.graph.hasDriver(`${comp.id}:COM`) || this.graph.hasDriver(`${comp.id}:COM2`);
 
@@ -351,15 +351,40 @@ export class CircuitEvaluator {
             comp.type === 'segment-7-anode' ||
             (comDriven && comVal === true);
 
+          // Physical requirement: COM must be connected to complete the circuit
+          // Common Cathode: COM must be connected to GND (LOW / 0V)
+          // Common Anode: COM must be connected to VCC (HIGH / 5V)
+          const hasSupply = isCommonAnode
+            ? (comDriven && comVal === true)
+            : (comDriven && comVal === false);
+
+          if (!hasSupply) {
+            updateState(comp.id, {
+              segA: false,
+              segB: false,
+              segC: false,
+              segD: false,
+              segE: false,
+              segF: false,
+              segG: false,
+              segDP: false,
+              values: [0, 0, 0, 0, 0, 0, 0, 0],
+              segments: [0, 0, 0, 0, 0, 0, 0, 0],
+              isCommonAnode,
+              hasSupply: false,
+            });
+            continue;
+          }
+
           const readSeg = (name: string): number => {
             const val = this.graph.read(`${comp.id}:${name}`) ?? this.graph.read(`${comp.id}:${name.toLowerCase()}`);
             const driven = this.graph.hasDriver(`${comp.id}:${name}`) || this.graph.hasDriver(`${comp.id}:${name.toLowerCase()}`);
             if (isCommonAnode) {
-              // Common Anode: COM is VCC (HIGH). A segment lights when pin is driven LOW
+              // Common Anode: COM is VCC (HIGH). A segment lights when pin is driven LOW (current sinks into MCU pin)
               return driven && val === false ? 1 : 0;
             } else {
-              // Common Cathode: COM is GND (LOW). A segment lights when pin is driven HIGH
-              return val === true ? 1 : 0;
+              // Common Cathode: COM is GND (LOW). A segment lights when pin is driven HIGH (current sources from MCU pin)
+              return driven && val === true ? 1 : 0;
             }
           };
 
@@ -385,6 +410,7 @@ export class CircuitEvaluator {
             values,
             segments: values,
             isCommonAnode,
+            hasSupply: true,
           });
         } else if (comp.type === 'segment-7-4digit') {
           const isCommonAnode = comp.props?.commonType === 'anode' || comp.state?.isCommonAnode;
@@ -394,7 +420,7 @@ export class CircuitEvaluator {
             if (isCommonAnode) {
               return driven && val === false ? 1 : 0;
             } else {
-              return val === true ? 1 : 0;
+              return driven && val === true ? 1 : 0;
             }
           };
 
@@ -423,15 +449,17 @@ export class CircuitEvaluator {
             this.graph.hasDriver(`${comp.id}:DIG4`),
           ];
 
-          let anyDigDriven = false;
+          let anyDigActive = false;
           for (let d = 0; d < 4; d++) {
+            // For cathode display: digit enable is active LOW (GND sink)
+            // For anode display: digit enable is active HIGH (VCC source)
             const isDigActive = isCommonAnode
-              ? digDrivens[d] && digReads[d] === true
-              : (digDrivens[d] && digReads[d] === false) || (!digDrivens[d] && digReads[d] === false);
+              ? (digDrivens[d] && digReads[d] === true)
+              : (digDrivens[d] && digReads[d] === false);
 
-            if (digDrivens[d]) anyDigDriven = true;
+            const base = d * 8;
             if (isDigActive) {
-              const base = d * 8;
+              anyDigActive = true;
               curValues[base + 0] = segA;
               curValues[base + 1] = segB;
               curValues[base + 2] = segC;
@@ -440,12 +468,14 @@ export class CircuitEvaluator {
               curValues[base + 5] = segF;
               curValues[base + 6] = segG;
               curValues[base + 7] = segDP;
+            } else if (digDrivens[d]) {
+              for (let i = 0; i < 8; i++) curValues[base + i] = 0;
             }
           }
 
-          if (!anyDigDriven && (segA || segB || segC || segD || segE || segF || segG || segDP)) {
-            curValues[0] = segA; curValues[1] = segB; curValues[2] = segC; curValues[3] = segD;
-            curValues[4] = segE; curValues[5] = segF; curValues[6] = segG; curValues[7] = segDP;
+          if (!anyDigActive) {
+            // No digit pins are powered or enabled: entire display is OFF
+            curValues.fill(0);
           }
 
           updateState(comp.id, {
@@ -453,6 +483,7 @@ export class CircuitEvaluator {
             segments: curValues,
             colonValue: Boolean(clnVal),
             isCommonAnode,
+            hasSupply: anyDigActive,
           });
         } else if (comp.type === 'relay-5v') {
           const inVal = this.graph.read(`${comp.id}:IN`);

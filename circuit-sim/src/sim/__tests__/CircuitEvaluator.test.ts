@@ -423,5 +423,88 @@ describe('CircuitEvaluator Integration', () => {
     expect(stateUpdates['buz-1']?.active).toBe(false);
     expect(stateUpdates['buz-1']?.sounding).toBe(false);
   });
+
+  it('7-segment display does NOT light up when COM is not connected to ground (Common Cathode)', () => {
+    const components: PlacedComponent[] = [
+      { id: 'uno-1', type: 'arduino-uno', name: 'Arduino Uno', x: 0, y: 0, rotation: 0, props: {} },
+      { id: 'seg-1', type: 'segment-7', name: '7-Segment Display', x: 200, y: 0, rotation: 0, props: { commonType: 'cathode' } },
+    ];
+
+    // Wire segment A to Arduino pin 2, but do NOT connect COM to GND!
+    const wires: WireConnection[] = [
+      { id: 'w1', fromComponentId: 'uno-1', fromPinId: '2', toComponentId: 'seg-1', toPinId: 'A', color: 'blue' },
+    ];
+
+    evaluator.syncGraph(components, wires);
+
+    let stateUpdates: Record<string, Record<string, any>> = {};
+    const updateState = (id: string, state: Record<string, any>) => {
+      stateUpdates[id] = { ...stateUpdates[id], ...state };
+    };
+
+    // Drive Pin 2 HIGH
+    evaluator.handlePinOutputChange(components[0], '2', true, components, updateState);
+
+    // Because COM is not connected to GND, the display must NOT light up!
+    expect(stateUpdates['seg-1']?.hasSupply).toBe(false);
+    expect(stateUpdates['seg-1']?.values).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(stateUpdates['seg-1']?.segA).toBe(false);
+
+    // Now connect COM to Arduino GND
+    const connectedWires: WireConnection[] = [
+      { id: 'w1', fromComponentId: 'uno-1', fromPinId: '2', toComponentId: 'seg-1', toPinId: 'A', color: 'blue' },
+      { id: 'w2', fromComponentId: 'seg-1', fromPinId: 'COM', toComponentId: 'uno-1', toPinId: 'GND1', color: 'black' },
+    ];
+
+    evaluator.syncGraph(components, connectedWires);
+    stateUpdates = {};
+    evaluator.handlePinOutputChange(components[0], '2', true, components, updateState);
+
+    // With COM connected to GND, segment A lights up!
+    expect(stateUpdates['seg-1']?.hasSupply).toBe(true);
+    expect(stateUpdates['seg-1']?.segA).toBe(true);
+    expect(stateUpdates['seg-1']?.values[0]).toBe(1);
+  });
+
+  it('Common Anode 7-segment display requires COM connected to 5V (VCC) to light up', () => {
+    const components: PlacedComponent[] = [
+      { id: 'uno-1', type: 'arduino-uno', name: 'Arduino Uno', x: 0, y: 0, rotation: 0, props: {} },
+      { id: 'seg-ca', type: 'segment-7-anode', name: '7-Segment Anode', x: 200, y: 0, rotation: 0, props: { commonType: 'anode' } },
+    ];
+
+    // Wire segment A to Arduino pin 2, but do NOT connect COM to 5V!
+    const wiresWithoutVcc: WireConnection[] = [
+      { id: 'w1', fromComponentId: 'uno-1', fromPinId: '2', toComponentId: 'seg-ca', toPinId: 'A', color: 'blue' },
+    ];
+
+    evaluator.syncGraph(components, wiresWithoutVcc);
+
+    let stateUpdates: Record<string, Record<string, any>> = {};
+    const updateState = (id: string, state: Record<string, any>) => {
+      stateUpdates[id] = { ...stateUpdates[id], ...state };
+    };
+
+    // Drive Pin 2 LOW (in common anode, LOW turns on segment)
+    evaluator.handlePinOutputChange(components[0], '2', false, components, updateState);
+
+    // Without COM connected to 5V, display has no supply and must NOT light up
+    expect(stateUpdates['seg-ca']?.hasSupply).toBe(false);
+    expect(stateUpdates['seg-ca']?.values).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+
+    // Now connect COM to 5V
+    const wiresWithVcc: WireConnection[] = [
+      { id: 'w1', fromComponentId: 'uno-1', fromPinId: '2', toComponentId: 'seg-ca', toPinId: 'A', color: 'blue' },
+      { id: 'w2', fromComponentId: 'seg-ca', fromPinId: 'COM', toComponentId: 'uno-1', toPinId: '5V', color: 'red' },
+    ];
+
+    evaluator.syncGraph(components, wiresWithVcc);
+    stateUpdates = {};
+    evaluator.handlePinOutputChange(components[0], '2', false, components, updateState);
+
+    // Now segment A lights up!
+    expect(stateUpdates['seg-ca']?.hasSupply).toBe(true);
+    expect(stateUpdates['seg-ca']?.segA).toBe(true);
+    expect(stateUpdates['seg-ca']?.values[0]).toBe(1);
+  });
 });
 
