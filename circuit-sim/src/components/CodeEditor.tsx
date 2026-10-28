@@ -20,6 +20,7 @@ interface Props {
 }
 
 const ARDUINO_LIBRARIES = [
+  { name: 'SevSeg.h', header: '#include <SevSeg.h>\n', desc: '7-Segment Display Driver (Common Cathode & Common Anode)' },
   { name: 'Servo.h', header: '#include <Servo.h>\n', desc: 'Servo Motor Control' },
   { name: 'LiquidCrystal_I2C.h', header: '#include <LiquidCrystal_I2C.h>\n', desc: 'I2C LCD1602 / 2004 Display' },
   { name: 'DHT.h', header: '#include <DHT.h>\n', desc: 'DHT11 / DHT22 Temp & Humidity' },
@@ -30,6 +31,67 @@ const ARDUINO_LIBRARIES = [
 ];
 
 const ARDUINO_TEMPLATES = [
+  {
+    name: '🔢 7-Segment Counter (#include <SevSeg.h>)',
+    code: `#include <SevSeg.h>
+
+SevSeg sevseg;
+int count = 0;
+
+void setup() {
+  byte numDigits = 1;
+  byte digitPins[] = {};
+  // Segment pins: A, B, C, D, E, F, G, DP
+  byte segmentPins[] = {2, 3, 4, 5, 6, 7, 8, 9};
+  bool resistorsOnSegments = true;
+  // Use COMMON_CATHODE or COMMON_ANODE
+  byte hardwareConfig = COMMON_CATHODE;
+
+  sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments);
+  sevseg.setBrightness(90);
+}
+
+void loop() {
+  sevseg.setNumber(count);
+  sevseg.refreshDisplay();
+  count = (count + 1) % 10;
+  delay(1000);
+}`,
+  },
+  {
+    name: '🔢 7-Segment Direct Drive (Common Cathode)',
+    code: `// Direct pin control for 7-Segment (Common Cathode: HIGH = ON)
+// Pins: A->2, B->3, C->4, D->5, E->6, F->7, G->8
+const int segPins[7] = {2, 3, 4, 5, 6, 7, 8};
+
+const byte digits[10][7] = {
+  {1,1,1,1,1,1,0}, // 0
+  {0,1,1,0,0,0,0}, // 1
+  {1,1,0,1,1,0,1}, // 2
+  {1,1,1,1,0,0,1}, // 3
+  {0,1,1,0,0,1,1}, // 4
+  {1,0,1,1,0,1,1}, // 5
+  {1,0,1,1,1,1,1}, // 6
+  {1,1,1,0,0,0,0}, // 7
+  {1,1,1,1,1,1,1}, // 8
+  {1,1,1,1,0,1,1}  // 9
+};
+
+void setup() {
+  for (int i = 0; i < 7; i++) {
+    pinMode(segPins[i], OUTPUT);
+  }
+}
+
+void loop() {
+  for (int num = 0; num < 10; num++) {
+    for (int s = 0; s < 7; s++) {
+      digitalWrite(segPins[s], digits[num][s]);
+    }
+    delay(1000);
+  }
+}`,
+  },
   {
     name: '💡 Blink (Built-in LED)',
     code: `void setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}`,

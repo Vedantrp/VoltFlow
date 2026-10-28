@@ -12,8 +12,12 @@ import path from 'node:path';
 const execFile = promisify(execFileCb);
 const app = express();
 
+// Disable Express fingerprinting header
+app.disable('x-powered-by');
+
 // Security Response Headers Middleware
 app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; form-action 'none'; base-uri 'none';");
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -245,6 +249,11 @@ app.post('/compile', rateLimitMiddleware, concurrencyGuardMiddleware, async (req
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
+});
+
+// Fallback JSON 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint Not Found' });
 });
 
 const PORT = process.env.PORT || 8787;

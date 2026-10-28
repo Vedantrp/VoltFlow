@@ -1,0 +1,17 @@
+# StackHawk Configuration for VoltFlow Compile Server
+# https://docs.stackhawk.com/hawkscan/configuration/
+
+app:
+  applicationId: ${APP_ID:420bd9c7-4741-4bb3-b71a-bc3be67e1684}
+  env: ${APP_ENV:Development}
+  host: ${APP_HOST:http://localhost:8787}
+
+  openApiConf:
+    filePath: openapi.json
+
+tags:
+  - name: _STACKHAWK_AGENT
+    value: ${HAWK_AGENT:antigravity}
+
+hawk:
+  failureThreshold: high

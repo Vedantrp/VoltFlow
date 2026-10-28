@@ -1,0 +1,76 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VoltFlow Compile API",
+    "version": "1.0.0",
+    "description": "AVR microcontroller C++ code compilation service"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/compile": {
+      "post": {
+        "summary": "Compile Arduino/AVR C++ code to Intel HEX binary",
+        "operationId": "compileCode",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["source"],
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "description": "C++ source code with setup() and loop() functions",
+                    "example": "void setup() { pinMode(13, OUTPUT); }\nvoid loop() { digitalWrite(13, HIGH); delay(500); digitalWrite(13, LOW); delay(500); }"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compilation successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hex": {
+                      "type": "string",
+                      "description": "Generated Intel HEX machine code string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Compilation failed or invalid source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit or concurrency limit exceeded"
+          }
+        }
+      }
+    }
+  }
+}

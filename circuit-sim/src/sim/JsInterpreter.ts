@@ -12,6 +12,7 @@ export interface InterpreterHooks {
   onServoWrite?: (pin: number, angle: number) => void;
   onStepperStep?: (steps: number, speedRpm: number, angle?: number) => void;
   onLcdUpdate?: (line1: string, line2: string) => void;
+  onSevenSegmentUpdate?: (values: number[], numDigits?: number, displayText?: string) => void;
   onSerialPrint: (text: string) => void;
   onDhtRead?: (pin?: number) => { temperature: number; humidity: number } | null;
 }
@@ -43,6 +44,13 @@ export class JsInterpreter {
   private sequenceSteps: SequenceStep[] = [];
   private totalSequenceDuration = 0;
   private serialRxBuffer = '';
+  private sevsegConfig: {
+    isConfigured: boolean;
+    isCommonAnode: boolean;
+    numDigits: number;
+    digitPins: number[];
+    segmentPins: number[];
+  } | null = null;
   private code: string;
   private hooks: InterpreterHooks;
 
@@ -574,6 +582,11 @@ export class JsInterpreter {
     // 5d. LCD 16x2 Display Evaluation (LiquidCrystal / LiquidCrystal_I2C)
     if (this.code.includes('lcd') || this.code.includes('LiquidCrystal')) {
       this.evaluateLcdWrites();
+    }
+
+    // 5e. SevSeg 7-Segment Display Evaluation
+    if (this.code.includes('SevSeg') || this.code.includes('sevseg')) {
+      this.evaluateSevSegWrites(elapsed);
     }
 
     // 5e. Evaluate Serial control blocks (e.g. Serial.available() -> Serial.read() -> digitalWrite / Serial.print)
@@ -1844,6 +1857,177 @@ export class JsInterpreter {
     const line1 = buf1.join('').trimEnd();
     const line2 = buf2.join('').trimEnd();
     this.hooks.onLcdUpdate?.(line1, line2);
+  }
+
+  private evaluateSevSegWrites(elapsed: number) {
+    // 1. Initialize SevSeg configuration if not already done
+    if (!this.sevsegConfig) {
+      // Hardware config: COMMON_ANODE vs COMMON_CATHODE
+      const isCommonAnode = /COMMON_ANODE|P_TRANSISTORS/i.test(this.code) || /sevseg\.begin\s*\(\s*1\s*,/i.test(this.code);
+
+      // Number of digits: e.g. numDigits = 1 or 4
+      let numDigits = 1;
+      const numDigitsMatch = /(?:byte|int)\s+numDigits\s*=\s*(\d+)/i.exec(this.code) ||
+                             /sevseg\.begin\s*\([^,]+,\s*(\d+)/i.exec(this.code);
+      if (numDigitsMatch) {
+        numDigits = parseInt(numDigitsMatch[1], 10) || 1;
+      }
+
+      // Segment pins array: e.g. byte segmentPins[] = { 6, 7, 8, 9, 10, 11, 12, 13 };
+      let segmentPins: number[] = [6, 7, 8, 9, 10, 11, 12, 13];
+      const segPinsMatch = /(?:byte|int)\s+segmentPins\s*\[\s*\]\s*=\s*\{([^}]+)\}/i.exec(this.code);
+      if (segPinsMatch) {
+        segmentPins = segPinsMatch[1].split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
+      }
+
+      // Digit pins array: e.g. byte digitPins[] = { 2, 3, 4, 5 };
+      let digitPins: number[] = [];
+      const digPinsMatch = /(?:byte|int)\s+digitPins\s*\[\s*\]\s*=\s*\{([^}]+)\}/i.exec(this.code);
+      if (digPinsMatch) {
+        digitPins = digPinsMatch[1].split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
+      }
+
+      this.sevsegConfig = {
+        isConfigured: true,
+        isCommonAnode,
+        numDigits,
+        digitPins,
+        segmentPins,
+      };
+    }
+
+    const { isCommonAnode, numDigits, segmentPins, digitPins } = this.sevsegConfig;
+
+    // Segment encoding dictionary: [A, B, C, D, E, F, G, DP]
+    const DIGIT_PATTERNS: Record<string, number[]> = {
+      '0': [1, 1, 1, 1, 1, 1, 0, 0],
+      '1': [0, 1, 1, 0, 0, 0, 0, 0],
+      '2': [1, 1, 0, 1, 1, 0, 1, 0],
+      '3': [1, 1, 1, 1, 0, 0, 1, 0],
+      '4': [0, 1, 1, 0, 0, 1, 1, 0],
+      '5': [1, 0, 1, 1, 0, 1, 1, 0],
+      '6': [1, 0, 1, 1, 1, 1, 1, 0],
+      '7': [1, 1, 1, 0, 0, 0, 0, 0],
+      '8': [1, 1, 1, 1, 1, 1, 1, 0],
+      '9': [1, 1, 1, 1, 0, 1, 1, 0],
+      '-': [0, 0, 0, 0, 0, 0, 1, 0],
+      ' ': [0, 0, 0, 0, 0, 0, 0, 0],
+      'A': [1, 1, 1, 0, 1, 1, 1, 0],
+      'B': [0, 0, 1, 1, 1, 1, 1, 0],
+      'C': [1, 0, 0, 1, 1, 1, 0, 0],
+      'D': [0, 1, 1, 1, 1, 0, 1, 0],
+      'E': [1, 0, 0, 1, 1, 1, 1, 0],
+      'F': [1, 0, 0, 0, 1, 1, 1, 0],
+      'H': [0, 1, 1, 0, 1, 1, 1, 0],
+      'L': [0, 0, 0, 1, 1, 1, 0, 0],
+      'P': [1, 1, 0, 0, 1, 1, 1, 0],
+      'U': [0, 1, 1, 1, 1, 1, 0, 0],
+    };
+
+    // 2. Parse setNumber, setNumberF, setChars, blank
+    let displayText = '';
+    let decPlaces: number | null = null;
+    let isBlank = false;
+
+    if (/sevseg\.blank\s*\(\s*\)/.test(this.code)) {
+      isBlank = true;
+    }
+
+    const setNumMatch = /sevseg\.setNumber(?:F)?\s*\(\s*([^,)]+)(?:,\s*([^)]+))?\)/i.exec(this.code);
+    const setCharsMatch = /sevseg\.setChars\s*\(\s*"([^"]+)"\s*\)/i.exec(this.code);
+
+    if (setCharsMatch) {
+      displayText = setCharsMatch[1];
+    } else if (setNumMatch) {
+      const rawExpr = setNumMatch[1].trim();
+      const rawDec = setNumMatch[2]?.trim();
+      if (rawDec) {
+        const d = this.varMap.get(rawDec) ?? parseInt(rawDec, 10);
+        if (!isNaN(d)) decPlaces = d;
+      }
+
+      // Check if expression or counting variable
+      let val: number | null = null;
+      if (this.varMap.has(rawExpr)) {
+        val = this.varMap.get(rawExpr)!;
+      } else {
+        const parsed = parseFloat(rawExpr);
+        if (!isNaN(parsed)) {
+          val = parsed;
+        } else {
+          val = this.evalMathExpr(rawExpr);
+        }
+      }
+
+      // If variable increments inside loop (e.g. count++ / i++) or millis() / 1000
+      const hasIncrement = new RegExp(`(?:${rawExpr}\\s*\\+\\+|\\+\\+\\s*${rawExpr}|${rawExpr}\\s*\\+=)`).test(this.code);
+      if (hasIncrement) {
+        const delayMatch = /delay\s*\(\s*(\d+)\s*\)/.exec(this.code);
+        const delayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
+        const currentCount = Math.floor(elapsed / Math.max(100, delayMs));
+        const maxLimit = numDigits === 1 ? 10 : 10000;
+        val = currentCount % maxLimit;
+      } else if (val === null && /millis\s*\(\s*\)/.test(rawExpr)) {
+        val = Math.floor(elapsed / 1000);
+      } else if (val === null) {
+        // Fallback default: show elapsed seconds or tick count
+        val = numDigits === 1 ? Math.floor(elapsed / 1000) % 10 : Math.floor(elapsed / 1000) % 10000;
+      }
+
+      if (decPlaces !== null && decPlaces >= 0) {
+        displayText = val.toFixed(decPlaces);
+      } else {
+        displayText = String(Math.round(val));
+      }
+    } else {
+      // Default live counter if sevseg is present
+      const currentCount = Math.floor(elapsed / 1000);
+      displayText = numDigits === 1 ? String(currentCount % 10) : String(currentCount % 10000);
+    }
+
+    if (isBlank) {
+      displayText = '';
+    }
+
+    // Pad / format displayText to fit digits
+    const cleanChars = displayText.replace(/\./g, '').slice(-numDigits).padStart(numDigits, ' ');
+    const allSegments: number[] = [];
+
+    for (let d = 0; d < numDigits; d++) {
+      const ch = (cleanChars[d] || ' ').toUpperCase();
+      const pattern = DIGIT_PATTERNS[ch] ? [...DIGIT_PATTERNS[ch]] : [0, 0, 0, 0, 0, 0, 0, 0];
+
+      // Check decimal point for this digit
+      if (decPlaces !== null && d === numDigits - 1 - decPlaces) {
+        pattern[7] = 1;
+      }
+
+      allSegments.push(...pattern);
+    }
+
+    // 3. Drive the physical / simulated digital output pins
+    // Single-digit or first digit segment writes:
+    const activeSegs = allSegments.slice(0, 8);
+    for (let i = 0; i < segmentPins.length && i < 8; i++) {
+      const pin = segmentPins[i];
+      const isLit = Boolean(activeSegs[i]);
+      // Common Cathode: Pin HIGH = Lit, Pin LOW = Unlit
+      // Common Anode: Pin LOW = Lit, Pin HIGH = Unlit
+      const pinState = isCommonAnode ? !isLit : isLit;
+      this.hooks.onDigitalWrite(pin, pinState);
+    }
+
+    // Multiplexed digit select pins
+    for (let d = 0; d < digitPins.length && d < numDigits; d++) {
+      const digPin = digitPins[d];
+      // For single digit or active digit enable:
+      const isDigActive = true;
+      const digState = isCommonAnode ? isDigActive : !isDigActive;
+      this.hooks.onDigitalWrite(digPin, digState);
+    }
+
+    // 4. Notify high-level callback for instant visual refresh
+    this.hooks.onSevenSegmentUpdate?.(allSegments, numDigits, displayText);
   }
 
   public stop() {

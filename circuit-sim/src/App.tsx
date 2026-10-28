@@ -638,6 +638,38 @@ export default function App() {
             updateComponentState(lcd.id, { line1, line2, text: `${line1}\n${line2}` });
           });
         },
+        onSevenSegmentUpdate: (values, _numDigits, displayText) => {
+          if (!simulationActiveRef.current) return;
+          const liveComps = useCircuitStore.getState().components;
+          const segComps = liveComps.filter(
+            (c) => c.type === 'segment-7' || c.type === 'segment-7-anode' || c.type === 'segment-7-4digit' || c.type === 'seven-segment'
+          );
+          segComps.forEach((seg) => {
+            if (seg.type === 'segment-7' || seg.type === 'segment-7-anode' || seg.type === 'seven-segment') {
+              const digitValues = values.slice(0, 8);
+              updateComponentState(seg.id, {
+                values: digitValues,
+                segments: digitValues,
+                segA: Boolean(digitValues[0]),
+                segB: Boolean(digitValues[1]),
+                segC: Boolean(digitValues[2]),
+                segD: Boolean(digitValues[3]),
+                segE: Boolean(digitValues[4]),
+                segF: Boolean(digitValues[5]),
+                segG: Boolean(digitValues[6]),
+                segDP: Boolean(digitValues[7]),
+                displayText,
+              });
+            } else if (seg.type === 'segment-7-4digit') {
+              const full4Values = values.length >= 32 ? values.slice(0, 32) : [...values, ...Array(Math.max(0, 32 - values.length)).fill(0)];
+              updateComponentState(seg.id, {
+                values: full4Values,
+                segments: full4Values,
+                displayText,
+              });
+            }
+          });
+        },
         onSerialPrint: (text) => {
           if (!simulationActiveRef.current) return;
           serialBufferRef.current += text;

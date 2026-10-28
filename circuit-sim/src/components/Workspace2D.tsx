@@ -259,21 +259,39 @@ function getWokwiProps(comp: PlacedComponent, isRunning: boolean): Record<string
       };
 
     case 'segment-7':
+    case 'segment-7-anode': {
+      const isAnode = comp.props?.commonType === 'anode' || comp.type === 'segment-7-anode' || comp.state?.isCommonAnode;
+      const segValues = state.values || state.segments || [
+        state.segA ? 1 : 0,
+        state.segB ? 1 : 0,
+        state.segC ? 1 : 0,
+        state.segD ? 1 : 0,
+        state.segE ? 1 : 0,
+        state.segF ? 1 : 0,
+        state.segG ? 1 : 0,
+        state.segDP ? 1 : 0,
+      ];
       return {
         ...props,
         ...state,
         digits: 1,
-        values: state.segments || props.segments || (isRunning ? [1, 1, 1, 1, 1, 1, 0, 0] : [0, 0, 0, 0, 0, 0, 0, 0]),
+        color: props.color || (isAnode ? '#38bdf8' : '#ef4444'),
+        values: isRunning ? segValues : [0, 0, 0, 0, 0, 0, 0, 0],
       };
+    }
 
-    case 'segment-7-4digit':
+    case 'segment-7-4digit': {
+      const segValues = state.values || state.segments || Array(32).fill(0);
       return {
         ...props,
         ...state,
         digits: 4,
         colon: true,
-        values: state.segments || props.segments || [0, 0, 0, 0, 0, 0, 0, 0],
+        colonValue: Boolean(state.colonValue),
+        color: props.color || '#ef4444',
+        values: isRunning ? segValues : Array(32).fill(0),
       };
+    }
 
     case 'lcd1602':
     case 'lcd1602-i2c': {

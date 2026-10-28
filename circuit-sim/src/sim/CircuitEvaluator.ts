@@ -338,16 +338,122 @@ export class CircuitEvaluator {
           const posDriven = this.graph.hasDriver(`${comp.id}:+`) || this.graph.hasDriver(`${comp.id}:1`) || this.graph.hasDriver(`${comp.id}:VCC`);
           const isSpinning = posVal === true && posDriven && negVal !== true;
           updateState(comp.id, { active: isSpinning, spinning: isSpinning, speed: isSpinning ? 100 : 0 });
-        } else if (comp.type === 'seven-segment') {
-          const segA = this.graph.read(`${comp.id}:A`) || this.graph.read(`${comp.id}:a`);
-          const segB = this.graph.read(`${comp.id}:B`) || this.graph.read(`${comp.id}:b`);
-          const segC = this.graph.read(`${comp.id}:C`) || this.graph.read(`${comp.id}:c`);
-          const segD = this.graph.read(`${comp.id}:D`) || this.graph.read(`${comp.id}:d`);
-          const segE = this.graph.read(`${comp.id}:E`) || this.graph.read(`${comp.id}:e`);
-          const segF = this.graph.read(`${comp.id}:F`) || this.graph.read(`${comp.id}:f`);
-          const segG = this.graph.read(`${comp.id}:G`) || this.graph.read(`${comp.id}:g`);
-          const segDP = this.graph.read(`${comp.id}:DP`) || this.graph.read(`${comp.id}:dp`);
-          updateState(comp.id, { segA, segB, segC, segD, segE, segF, segG, segDP });
+        } else if (comp.type === 'seven-segment' || comp.type === 'segment-7' || comp.type === 'segment-7-anode') {
+          // Check COM connections
+          const comVal = this.graph.read(`${comp.id}:COM`) ?? this.graph.read(`${comp.id}:COM2`);
+          const comDriven = this.graph.hasDriver(`${comp.id}:COM`) || this.graph.hasDriver(`${comp.id}:COM2`);
+
+          // Determine Common Anode vs Common Cathode:
+          // 1. Explicit props/type
+          // 2. COM pin connected to VCC (anode) or GND (cathode)
+          const isCommonAnode =
+            comp.props?.commonType === 'anode' ||
+            comp.type === 'segment-7-anode' ||
+            (comDriven && comVal === true);
+
+          const readSeg = (name: string): number => {
+            const val = this.graph.read(`${comp.id}:${name}`) ?? this.graph.read(`${comp.id}:${name.toLowerCase()}`);
+            const driven = this.graph.hasDriver(`${comp.id}:${name}`) || this.graph.hasDriver(`${comp.id}:${name.toLowerCase()}`);
+            if (isCommonAnode) {
+              // Common Anode: COM is VCC (HIGH). A segment lights when pin is driven LOW
+              return driven && val === false ? 1 : 0;
+            } else {
+              // Common Cathode: COM is GND (LOW). A segment lights when pin is driven HIGH
+              return val === true ? 1 : 0;
+            }
+          };
+
+          const segA = readSeg('A');
+          const segB = readSeg('B');
+          const segC = readSeg('C');
+          const segD = readSeg('D');
+          const segE = readSeg('E');
+          const segF = readSeg('F');
+          const segG = readSeg('G');
+          const segDP = readSeg('DP');
+          const values = [segA, segB, segC, segD, segE, segF, segG, segDP];
+
+          updateState(comp.id, {
+            segA: Boolean(segA),
+            segB: Boolean(segB),
+            segC: Boolean(segC),
+            segD: Boolean(segD),
+            segE: Boolean(segE),
+            segF: Boolean(segF),
+            segG: Boolean(segG),
+            segDP: Boolean(segDP),
+            values,
+            segments: values,
+            isCommonAnode,
+          });
+        } else if (comp.type === 'segment-7-4digit') {
+          const isCommonAnode = comp.props?.commonType === 'anode' || comp.state?.isCommonAnode;
+          const readSeg = (name: string): number => {
+            const val = this.graph.read(`${comp.id}:${name}`) ?? this.graph.read(`${comp.id}:${name.toLowerCase()}`);
+            const driven = this.graph.hasDriver(`${comp.id}:${name}`) || this.graph.hasDriver(`${comp.id}:${name.toLowerCase()}`);
+            if (isCommonAnode) {
+              return driven && val === false ? 1 : 0;
+            } else {
+              return val === true ? 1 : 0;
+            }
+          };
+
+          const segA = readSeg('A');
+          const segB = readSeg('B');
+          const segC = readSeg('C');
+          const segD = readSeg('D');
+          const segE = readSeg('E');
+          const segF = readSeg('F');
+          const segG = readSeg('G');
+          const segDP = readSeg('DP');
+          const clnVal = readSeg('CLN');
+          const curValues = comp.state?.values ? [...comp.state.values] : Array(32).fill(0);
+
+          // Read digit enables DIG1..DIG4
+          const digReads = [
+            this.graph.read(`${comp.id}:DIG1`),
+            this.graph.read(`${comp.id}:DIG2`),
+            this.graph.read(`${comp.id}:DIG3`),
+            this.graph.read(`${comp.id}:DIG4`),
+          ];
+          const digDrivens = [
+            this.graph.hasDriver(`${comp.id}:DIG1`),
+            this.graph.hasDriver(`${comp.id}:DIG2`),
+            this.graph.hasDriver(`${comp.id}:DIG3`),
+            this.graph.hasDriver(`${comp.id}:DIG4`),
+          ];
+
+          let anyDigDriven = false;
+          for (let d = 0; d < 4; d++) {
+            const isDigActive = isCommonAnode
+              ? digDrivens[d] && digReads[d] === true
+              : (digDrivens[d] && digReads[d] === false) || (!digDrivens[d] && digReads[d] === false);
+
+            if (digDrivens[d]) anyDigDriven = true;
+            if (isDigActive) {
+              const base = d * 8;
+              curValues[base + 0] = segA;
+              curValues[base + 1] = segB;
+              curValues[base + 2] = segC;
+              curValues[base + 3] = segD;
+              curValues[base + 4] = segE;
+              curValues[base + 5] = segF;
+              curValues[base + 6] = segG;
+              curValues[base + 7] = segDP;
+            }
+          }
+
+          if (!anyDigDriven && (segA || segB || segC || segD || segE || segF || segG || segDP)) {
+            curValues[0] = segA; curValues[1] = segB; curValues[2] = segC; curValues[3] = segD;
+            curValues[4] = segE; curValues[5] = segF; curValues[6] = segG; curValues[7] = segDP;
+          }
+
+          updateState(comp.id, {
+            values: curValues,
+            segments: curValues,
+            colonValue: Boolean(clnVal),
+            isCommonAnode,
+          });
         } else if (comp.type === 'relay-5v') {
           const inVal = this.graph.read(`${comp.id}:IN`);
           const vccVal = this.graph.read(`${comp.id}:VCC`);

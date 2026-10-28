@@ -133,6 +133,116 @@ export const SensorInspectorModal: React.FC<SensorInspectorProps> = ({
         </div>
       )}
 
+      {/* 7-Segment Display (Single & 4-Digit) Inspector */}
+      {(type === 'segment-7' || type === 'segment-7-anode' || type === 'segment-7-4digit' || type === 'seven-segment') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Common Anode vs Common Cathode Mode Toggle */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>Configuration Mode:</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => onUpdateProps(id, { commonType: 'cathode' })}
+                style={{
+                  padding: '6px 8px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 6,
+                  border: (props.commonType || (type === 'segment-7-anode' ? 'anode' : 'cathode')) === 'cathode' ? '1.5px solid #38bdf8' : '1px solid #334155',
+                  backgroundColor: (props.commonType || (type === 'segment-7-anode' ? 'anode' : 'cathode')) === 'cathode' ? '#0284c7' : '#0f172a',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Common Cathode (CC)
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdateProps(id, { commonType: 'anode' })}
+                style={{
+                  padding: '6px 8px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 6,
+                  border: (props.commonType || (type === 'segment-7-anode' ? 'anode' : 'cathode')) === 'anode' ? '1.5px solid #38bdf8' : '1px solid #334155',
+                  backgroundColor: (props.commonType || (type === 'segment-7-anode' ? 'anode' : 'cathode')) === 'anode' ? '#0284c7' : '#0f172a',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Common Anode (CA)
+              </button>
+            </div>
+          </div>
+
+          {/* LED Color Picker */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, fontWeight: 600, color: '#cbd5e1' }}>
+            <span>Segment Color:</span>
+            <span style={{ color: '#38bdf8', fontWeight: 800, textTransform: 'capitalize' }}>
+              {props.color || 'red'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+            {[
+              { id: 'red', hex: '#ef4444' },
+              { id: 'green', hex: '#22c55e' },
+              { id: 'blue', hex: '#3b82f6' },
+              { id: 'yellow', hex: '#eab308' },
+              { id: 'orange', hex: '#f97316' },
+            ].map((c) => {
+              const active = (props.color || 'red').toLowerCase() === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => onUpdateProps(id, { color: c.id })}
+                  style={{
+                    height: 24,
+                    borderRadius: 4,
+                    border: active ? '2px solid #ffffff' : '1px solid #475569',
+                    backgroundColor: c.hex,
+                    cursor: 'pointer',
+                    boxShadow: active ? `0 0 8px ${c.hex}` : 'none',
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Live Segment Status Indicators */}
+          {isRunning && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid #334155', paddingTop: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>Live Segments:</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
+                {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'DP'].map((seg, i) => {
+                  const vals = component.state?.values || [];
+                  const lit = Boolean(vals[i] ?? component.state?.[`seg${seg}`]);
+                  return (
+                    <div
+                      key={seg}
+                      style={{
+                        padding: '3px 0',
+                        fontSize: 9,
+                        fontWeight: 800,
+                        textAlign: 'center',
+                        borderRadius: 3,
+                        backgroundColor: lit ? '#059669' : '#0f172a',
+                        color: lit ? '#ffffff' : '#64748b',
+                        border: lit ? '1px solid #10b981' : '1px solid #334155',
+                      }}
+                    >
+                      {seg}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 0. Resistor Resistance Slider & Multi-Preset Inspector */}
       {type === 'resistor' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

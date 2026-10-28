@@ -34,6 +34,7 @@ export type ModuleVisualType =
   | 'gear-motor'
   | 'ir-remote'
   | 'segment-7'
+  | 'segment-7-anode'
   | 'segment-7-4digit'
   | 'lcd1602-i2c'
   | 'lcd1602'
@@ -80,6 +81,7 @@ export function hasModuleVisual(type: string): type is ModuleVisualType {
     'gear-motor',
     'ir-remote',
     'segment-7',
+    'segment-7-anode',
     'segment-7-4digit',
     'lcd1602-i2c',
     'lcd1602',
@@ -1980,11 +1982,34 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
     );
   }
 
-  // 32. 7-Segment Single Digit Display
-  if (type === 'segment-7') {
+  // 32. 7-Segment Single Digit Display (Common Cathode & Common Anode)
+  if (type === 'segment-7' || type === 'segment-7-anode') {
+    const isAnode = comp?.props?.commonType === 'anode' || type === 'segment-7-anode' || comp?.state?.isCommonAnode;
+    const vals = comp?.state?.values || [
+      comp?.state?.segA ? 1 : 0,
+      comp?.state?.segB ? 1 : 0,
+      comp?.state?.segC ? 1 : 0,
+      comp?.state?.segD ? 1 : 0,
+      comp?.state?.segE ? 1 : 0,
+      comp?.state?.segF ? 1 : 0,
+      comp?.state?.segG ? 1 : 0,
+      comp?.state?.segDP ? 1 : 0,
+    ];
+    const userColor = comp?.props?.color || (isAnode ? '#38bdf8' : '#ef4444');
+    const offColor = '#27272a';
+    const isLit = (idx: number) => isRunning && Boolean(vals[idx]);
+
+    const segStyle = (active: boolean, horiz: boolean): React.CSSProperties => ({
+      position: 'absolute',
+      backgroundColor: active ? userColor : offColor,
+      borderRadius: horiz ? 2 : 2,
+      boxShadow: active ? `0 0 6px 1px ${userColor}` : 'none',
+      transition: 'background-color 0.08s, box-shadow 0.08s',
+    });
+
     return (
       <div
-        aria-label="7 Segment Display"
+        aria-label={isAnode ? "7 Segment Display (Common Anode)" : "7 Segment Display (Common Cathode)"}
         role="img"
         style={{
           position: 'relative',
@@ -2000,31 +2025,60 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
           userSelect: 'none',
         }}
       >
+        {/* Subtle Common Indicator Badge */}
+        <span
+          style={{
+            position: 'absolute',
+            top: 3,
+            left: 4,
+            fontSize: 7,
+            fontWeight: 800,
+            color: isAnode ? '#38bdf8' : '#a1a1aa',
+            letterSpacing: 0.5,
+          }}
+        >
+          {isAnode ? 'CA' : 'CC'}
+        </span>
+
         {/* 7 Segment Figure 8 Pattern */}
         <div style={{ position: 'relative', width: 22, height: 38 }}>
-          {/* Segment A */}
-          <div style={{ position: 'absolute', top: 0, left: 2, right: 2, height: 3, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment B */}
-          <div style={{ position: 'absolute', top: 2, right: 0, width: 3, height: 16, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment C */}
-          <div style={{ position: 'absolute', bottom: 2, right: 0, width: 3, height: 16, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment D */}
-          <div style={{ position: 'absolute', bottom: 0, left: 2, right: 2, height: 3, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment E */}
-          <div style={{ position: 'absolute', bottom: 2, left: 0, width: 3, height: 16, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment F */}
-          <div style={{ position: 'absolute', top: 2, left: 0, width: 3, height: 16, backgroundColor: '#3f3f46', borderRadius: 1 }} />
-          {/* Segment G */}
-          <div style={{ position: 'absolute', top: 18, left: 2, right: 2, height: 3, backgroundColor: '#3f3f46', borderRadius: 1 }} />
+          {/* Segment A (Top) */}
+          <div style={{ ...segStyle(isLit(0), true), top: 0, left: 2, right: 2, height: 3.5 }} />
+          {/* Segment B (Top-Right) */}
+          <div style={{ ...segStyle(isLit(1), false), top: 2, right: 0, width: 3.5, height: 16 }} />
+          {/* Segment C (Bottom-Right) */}
+          <div style={{ ...segStyle(isLit(2), false), bottom: 2, right: 0, width: 3.5, height: 16 }} />
+          {/* Segment D (Bottom) */}
+          <div style={{ ...segStyle(isLit(3), true), bottom: 0, left: 2, right: 2, height: 3.5 }} />
+          {/* Segment E (Bottom-Left) */}
+          <div style={{ ...segStyle(isLit(4), false), bottom: 2, left: 0, width: 3.5, height: 16 }} />
+          {/* Segment F (Top-Left) */}
+          <div style={{ ...segStyle(isLit(5), false), top: 2, left: 0, width: 3.5, height: 16 }} />
+          {/* Segment G (Middle) */}
+          <div style={{ ...segStyle(isLit(6), true), top: 18, left: 2, right: 2, height: 3.5 }} />
           {/* Decimal Point DP */}
-          <div style={{ position: 'absolute', bottom: 0, right: -6, width: 3, height: 3, borderRadius: '50%', backgroundColor: '#3f3f46' }} />
+          <div
+            style={{
+              ...segStyle(isLit(7), false),
+              bottom: 0,
+              right: -6,
+              width: 3.5,
+              height: 3.5,
+              borderRadius: '50%',
+            }}
+          />
         </div>
       </div>
     );
   }
 
-  // 33. 4-Digit 7-Segment Display (TM1637)
+  // 33. 4-Digit 7-Segment Display (TM1637 / Multiplexed)
   if (type === 'segment-7-4digit') {
+    const rawVals: number[] = comp?.state?.values || comp?.state?.segments || [];
+    const isAnode = comp?.props?.commonType === 'anode' || comp?.state?.isCommonAnode;
+    const userColor = comp?.props?.color || '#ef4444';
+    const colonLit = isRunning && Boolean(comp?.state?.colonValue);
+
     return (
       <div
         aria-label="4-Digit 7-Segment Display Module"
@@ -2044,19 +2098,55 @@ export const ModuleVisual: React.FC<ModuleVisualProps> = ({ type, comp, isSelect
           userSelect: 'none',
         }}
       >
-        {[0, 1, 2, 3].map((d) => (
-          <React.Fragment key={d}>
-            <div style={{ width: 18, height: 30, backgroundColor: '#18181b', borderRadius: 3, border: '1px solid #27272a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 16, fontWeight: 900, color: isRunning ? '#ef4444' : '#3f3f46', fontFamily: 'monospace' }}>8</span>
-            </div>
-            {d === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: isRunning ? '#ef4444' : '#3f3f46' }} />
-                <div style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: isRunning ? '#ef4444' : '#3f3f46' }} />
+        {[0, 1, 2, 3].map((d) => {
+          const segSlice = rawVals.slice(d * 8, (d + 1) * 8);
+          const isSegLit = (i: number) => isRunning && Boolean(segSlice[i]);
+          const offCol = '#27272a';
+
+          return (
+            <React.Fragment key={d}>
+              <div
+                style={{
+                  width: 22,
+                  height: 36,
+                  backgroundColor: '#18181b',
+                  borderRadius: 3,
+                  border: '1px solid #27272a',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* 7 Segments */}
+                <div style={{ position: 'relative', width: 14, height: 26 }}>
+                  {/* A */}
+                  <div style={{ position: 'absolute', top: 0, left: 1, right: 1, height: 2.5, backgroundColor: isSegLit(0) ? userColor : offCol, boxShadow: isSegLit(0) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* B */}
+                  <div style={{ position: 'absolute', top: 1, right: 0, width: 2.5, height: 11, backgroundColor: isSegLit(1) ? userColor : offCol, boxShadow: isSegLit(1) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* C */}
+                  <div style={{ position: 'absolute', bottom: 1, right: 0, width: 2.5, height: 11, backgroundColor: isSegLit(2) ? userColor : offCol, boxShadow: isSegLit(2) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* D */}
+                  <div style={{ position: 'absolute', bottom: 0, left: 1, right: 1, height: 2.5, backgroundColor: isSegLit(3) ? userColor : offCol, boxShadow: isSegLit(3) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* E */}
+                  <div style={{ position: 'absolute', bottom: 1, left: 0, width: 2.5, height: 11, backgroundColor: isSegLit(4) ? userColor : offCol, boxShadow: isSegLit(4) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* F */}
+                  <div style={{ position: 'absolute', top: 1, left: 0, width: 2.5, height: 11, backgroundColor: isSegLit(5) ? userColor : offCol, boxShadow: isSegLit(5) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* G */}
+                  <div style={{ position: 'absolute', top: 12, left: 1, right: 1, height: 2.5, backgroundColor: isSegLit(6) ? userColor : offCol, boxShadow: isSegLit(6) ? `0 0 4px ${userColor}` : 'none' }} />
+                  {/* DP */}
+                  <div style={{ position: 'absolute', bottom: 0, right: -4, width: 2.5, height: 2.5, borderRadius: '50%', backgroundColor: isSegLit(7) ? userColor : offCol }} />
+                </div>
               </div>
-            )}
-          </React.Fragment>
-        ))}
+              {d === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: colonLit ? userColor : '#3f3f46', boxShadow: colonLit ? `0 0 4px ${userColor}` : 'none' }} />
+                  <div style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: colonLit ? userColor : '#3f3f46', boxShadow: colonLit ? `0 0 4px ${userColor}` : 'none' }} />
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     );
   }

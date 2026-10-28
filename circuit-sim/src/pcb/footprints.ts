@@ -1169,6 +1169,7 @@ export function getFootprintForComponent(type: string): Footprint | null {
       return FOOTPRINT_LIBRARY['MODULE-WS2812-BREAKOUT'];
 
     case 'segment-7':
+    case 'segment-7-anode':
       return FOOTPRINT_LIBRARY['DISPLAY-7SEG-1DIGIT'];
 
     case 'segment-7-4digit':

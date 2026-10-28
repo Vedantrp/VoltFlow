@@ -678,6 +678,100 @@ void loop() {
     console.log('TEST STEPPED:', stepped);
     interpreter.stop();
   });
+
+  it('evaluates SevSeg library for Common Cathode 7-segment display', () => {
+    const sevSegCode = `
+      #include <SevSeg.h>
+      SevSeg sevseg;
+      void setup() {
+        byte numDigits = 1;
+        byte digitPins[] = {};
+        byte segmentPins[] = {2, 3, 4, 5, 6, 7, 8, 9};
+        bool resistorsOnSegments = true;
+        byte hardwareConfig = COMMON_CATHODE;
+        sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments);
+      }
+      void loop() {
+        sevseg.setNumber(7);
+        sevseg.refreshDisplay();
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    let capturedValues: number[] = [];
+
+    const interpreter = new JsInterpreter(sevSegCode, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => {
+        pinStates[pin] = high;
+      },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSevenSegmentUpdate: (values) => {
+        capturedValues = values;
+      },
+      onSerialPrint: () => {},
+    });
+
+    interpreter.start();
+    // Digit 7 has segments A, B, C lit (1, 1, 1, 0, 0, 0, 0, 0)
+    // Pins 2(A), 3(B), 4(C) should be HIGH (true) for Common Cathode
+    expect(pinStates[2]).toBe(true);
+    expect(pinStates[3]).toBe(true);
+    expect(pinStates[4]).toBe(true);
+    expect(pinStates[5]).toBe(false); // D is LOW
+    expect(capturedValues.slice(0, 3)).toEqual([1, 1, 1]);
+    interpreter.stop();
+  });
+
+  it('evaluates SevSeg library for Common Anode 7-segment display', () => {
+    const sevSegAnodeCode = `
+      #include <SevSeg.h>
+      SevSeg sevseg;
+      void setup() {
+        byte numDigits = 1;
+        byte digitPins[] = {};
+        byte segmentPins[] = {2, 3, 4, 5, 6, 7, 8, 9};
+        bool resistorsOnSegments = true;
+        byte hardwareConfig = COMMON_ANODE;
+        sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments);
+      }
+      void loop() {
+        sevseg.setNumber(1);
+        sevseg.refreshDisplay();
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    let capturedValues: number[] = [];
+
+    const interpreter = new JsInterpreter(sevSegAnodeCode, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => {
+        pinStates[pin] = high;
+      },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSevenSegmentUpdate: (values) => {
+        capturedValues = values;
+      },
+      onSerialPrint: () => {},
+    });
+
+    interpreter.start();
+    // Digit 1 has segments B, C lit.
+    // For Common Anode, lit segments are driven LOW (false), unlit are HIGH (true)
+    expect(pinStates[3]).toBe(false); // B lit -> LOW
+    expect(pinStates[4]).toBe(false); // C lit -> LOW
+    expect(pinStates[2]).toBe(true);  // A unlit -> HIGH
+    expect(pinStates[5]).toBe(true);  // D unlit -> HIGH
+    expect(capturedValues[1]).toBe(1); // B is lit
+    expect(capturedValues[2]).toBe(1); // C is lit
+    expect(capturedValues[0]).toBe(0); // A is unlit
+    interpreter.stop();
+  });
 });
 
 
