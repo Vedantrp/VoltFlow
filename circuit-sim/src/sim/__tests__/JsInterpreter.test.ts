@@ -772,6 +772,61 @@ void loop() {
     expect(capturedValues[0]).toBe(0); // A is unlit
     interpreter.stop();
   });
+
+  it('correctly displays fixed constant setNumber(1) without counting for custom instance names', () => {
+    const userCode = `
+      #include <SevSeg.h>
+      SevSeg display;
+
+      void setup() {
+        byte digitcount=1;
+        byte commonpins[]={};
+        byte segpins[]={2,3,4,5,6,7,8,9};
+        bool resistorsetting=true;
+        display.begin(COMMON_CATHODE,digitcount,commonpins,segpins,resistorsetting);
+        display.setBrightness(90);
+      }
+
+      void loop() {
+        display.setNumber(1);
+      }
+    `;
+
+    const pinStates: Record<number, boolean> = {};
+    let capturedValues: number[] = [];
+    let capturedText = '';
+
+    const interpreter = new JsInterpreter(userCode, {
+      onPinMode: () => {},
+      onDigitalWrite: (pin, high) => {
+        pinStates[pin] = high;
+      },
+      onDigitalRead: () => false,
+      onAnalogRead: () => 0,
+      onAnalogWrite: () => {},
+      onSevenSegmentUpdate: (values, _numDigits, text) => {
+        capturedValues = values;
+        capturedText = text || '';
+      },
+      onSerialPrint: () => {},
+    });
+
+    interpreter.start();
+
+    // Constant 1 must display '1' and NOT auto-count 1 to 10
+    expect(capturedText).toBe('1');
+    // Digit 1: segments B and C lit (pins 3 and 4 HIGH), all others LOW
+    expect(pinStates[2]).toBe(false); // A = off
+    expect(pinStates[3]).toBe(true);  // B = on
+    expect(pinStates[4]).toBe(true);  // C = on
+    expect(pinStates[5]).toBe(false); // D = off
+    expect(pinStates[6]).toBe(false); // E = off
+    expect(pinStates[7]).toBe(false); // F = off
+    expect(pinStates[8]).toBe(false); // G = off
+    expect(capturedValues).toEqual([0, 1, 1, 0, 0, 0, 0, 0]);
+
+    interpreter.stop();
+  });
 });
 
 

@@ -585,7 +585,7 @@ export class JsInterpreter {
     }
 
     // 5e. SevSeg 7-Segment Display Evaluation
-    if (this.code.includes('SevSeg') || this.code.includes('sevseg')) {
+    if (this.code.includes('SevSeg') || this.code.includes('sevseg') || this.code.includes('COMMON_CATHODE') || this.code.includes('COMMON_ANODE') || this.code.includes('setNumber')) {
       this.evaluateSevSegWrites(elapsed);
     }
 
@@ -1860,37 +1860,93 @@ export class JsInterpreter {
   }
 
   private evaluateSevSegWrites(elapsed: number) {
-    // 1. Initialize SevSeg configuration if not already done
+    // 1. Extract all array declarations across the entire sketch (e.g. byte commonpins[] = {}; byte segpins[] = {2,3,4,5,6,7,8,9};)
+    const declaredArrays = new Map<string, number[]>();
+    const arrDeclRe = /(?:(?:const\s+)?(?:byte|int|uint8_t|short)\s+)?([A-Za-z0-9_]+)\s*\[\s*\]\s*=\s*\{([^}]*)\}/gi;
+    let am: RegExpExecArray | null;
+    while ((am = arrDeclRe.exec(this.code)) !== null) {
+      const arrName = am[1].trim();
+      const rawContent = am[2].trim();
+      const items = rawContent
+        ? rawContent.split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n))
+        : [];
+      declaredArrays.set(arrName, items);
+    }
+
+    // 2. Initialize SevSeg configuration if not already configured
     if (!this.sevsegConfig) {
-      // Hardware config: COMMON_ANODE vs COMMON_CATHODE
-      const isCommonAnode = /COMMON_ANODE|P_TRANSISTORS/i.test(this.code) || /sevseg\.begin\s*\(\s*1\s*,/i.test(this.code);
+      // Find SevSeg variable instance name: e.g. SevSeg display; or SevSeg mySeg;
+      const instMatch = /SevSeg\s+([A-Za-z0-9_]+)/i.exec(this.code);
+      const instName = instMatch ? instMatch[1] : '[A-Za-z0-9_]+';
 
-      // Number of digits: e.g. numDigits = 1 or 4
+      // Parse .begin(...) with any variable names: e.g. display.begin(COMMON_CATHODE, digitcount, commonpins, segpins, resistorsetting);
+      const beginMatch = new RegExp(`(?:${instName}|[A-Za-z0-9_]+)\\.begin\\s*\\(([^)]+)\\)`, 'i').exec(this.code);
+
+      let isCommonAnode = false;
       let numDigits = 1;
-      const numDigitsMatch = /(?:byte|int)\s+numDigits\s*=\s*(\d+)/i.exec(this.code) ||
-                             /sevseg\.begin\s*\([^,]+,\s*(\d+)/i.exec(this.code);
-      if (numDigitsMatch) {
-        numDigits = parseInt(numDigitsMatch[1], 10) || 1;
-      }
-
-      // Segment pins array: e.g. byte segmentPins[] = { 6, 7, 8, 9, 10, 11, 12, 13 };
-      let segmentPins: number[] = [6, 7, 8, 9, 10, 11, 12, 13];
-      const segPinsMatch = /(?:byte|int)\s+segmentPins\s*\[\s*\]\s*=\s*\{([^}]+)\}/i.exec(this.code);
-      if (segPinsMatch) {
-        segmentPins = segPinsMatch[1].split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
-      }
-
-      // Digit pins array: e.g. byte digitPins[] = { 2, 3, 4, 5 };
       let digitPins: number[] = [];
-      const digPinsMatch = /(?:byte|int)\s+digitPins\s*\[\s*\]\s*=\s*\{([^}]+)\}/i.exec(this.code);
-      if (digPinsMatch) {
-        digitPins = digPinsMatch[1].split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
+      let segmentPins: number[] = [2, 3, 4, 5, 6, 7, 8, 9];
+
+      if (beginMatch) {
+        const rawArgs = beginMatch[1].split(',').map((s) => s.trim());
+
+        // Arg 0: Hardware configuration (COMMON_ANODE vs COMMON_CATHODE)
+        const cfgArg = rawArgs[0] || '';
+        if (/COMMON_ANODE|P_TRANSISTORS/i.test(cfgArg) || cfgArg === '1') {
+          isCommonAnode = true;
+        } else if (/COMMON_CATHODE|N_TRANSISTORS/i.test(cfgArg) || cfgArg === '0') {
+          isCommonAnode = false;
+        } else {
+          // Check if variable defined as COMMON_ANODE or COMMON_CATHODE
+          const cfgVarMatch = new RegExp(`(?:byte|int|auto)\\s+${cfgArg}\\s*=\\s*([^;]+)`, 'i').exec(this.code);
+          if (cfgVarMatch && /COMMON_ANODE|P_TRANSISTORS|1/i.test(cfgVarMatch[1])) {
+            isCommonAnode = true;
+          }
+        }
+
+        // Arg 1: Number of digits (e.g. digitcount, numDigits, or literal 1, 4)
+        const digArg = rawArgs[1] || '1';
+        const parsedDigits = parseInt(digArg, 10);
+        if (!isNaN(parsedDigits)) {
+          numDigits = parsedDigits;
+        } else if (this.varMap.has(digArg)) {
+          numDigits = this.varMap.get(digArg)!;
+        } else {
+          const varMatch = new RegExp(`(?:byte|int|uint8_t|short)\\s+${digArg}\\s*=\\s*(\\d+)`, 'i').exec(this.code);
+          if (varMatch) numDigits = parseInt(varMatch[1], 10);
+        }
+
+        // Arg 2: Common / digit select pins array
+        const comArg = rawArgs[2] || '';
+        if (declaredArrays.has(comArg)) {
+          digitPins = declaredArrays.get(comArg)!;
+        } else if (comArg.startsWith('{')) {
+          digitPins = comArg.replace(/[{}]/g, '').split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
+        }
+
+        // Arg 3: Segment pins array (A, B, C, D, E, F, G, DP)
+        const segArg = rawArgs[3] || '';
+        if (declaredArrays.has(segArg)) {
+          segmentPins = declaredArrays.get(segArg)!;
+        } else if (segArg.startsWith('{')) {
+          segmentPins = segArg.replace(/[{}]/g, '').split(',').map((p) => this.resolvePin(p.trim())).filter((n) => !isNaN(n));
+        }
+      }
+
+      // If segment pins were not specified or found, check any declared array with 7 or 8 elements
+      if (segmentPins.length < 7) {
+        for (const arr of declaredArrays.values()) {
+          if (arr.length === 7 || arr.length === 8) {
+            segmentPins = arr;
+            break;
+          }
+        }
       }
 
       this.sevsegConfig = {
         isConfigured: true,
         isCommonAnode,
-        numDigits,
+        numDigits: numDigits > 0 ? numDigits : 1,
         digitPins,
         segmentPins,
       };
@@ -1898,7 +1954,7 @@ export class JsInterpreter {
 
     const { isCommonAnode, numDigits, segmentPins, digitPins } = this.sevsegConfig;
 
-    // Segment encoding dictionary: [A, B, C, D, E, F, G, DP]
+    // Standard 7-Segment display patterns for characters: [A, B, C, D, E, F, G, DP]
     const DIGIT_PATTERNS: Record<string, number[]> = {
       '0': [1, 1, 1, 1, 1, 1, 0, 0],
       '1': [0, 1, 1, 0, 0, 0, 0, 0],
@@ -1918,78 +1974,120 @@ export class JsInterpreter {
       'D': [0, 1, 1, 1, 1, 0, 1, 0],
       'E': [1, 0, 0, 1, 1, 1, 1, 0],
       'F': [1, 0, 0, 0, 1, 1, 1, 0],
+      'G': [1, 0, 1, 1, 1, 1, 0, 0],
       'H': [0, 1, 1, 0, 1, 1, 1, 0],
+      'I': [0, 1, 1, 0, 0, 0, 0, 0],
+      'J': [0, 1, 1, 1, 1, 0, 0, 0],
       'L': [0, 0, 0, 1, 1, 1, 0, 0],
+      'N': [0, 0, 1, 0, 1, 0, 1, 0],
+      'O': [1, 1, 1, 1, 1, 1, 0, 0],
       'P': [1, 1, 0, 0, 1, 1, 1, 0],
+      'Q': [1, 1, 1, 0, 0, 1, 1, 0],
+      'R': [0, 0, 0, 0, 1, 0, 1, 0],
+      'S': [1, 0, 1, 1, 0, 1, 1, 0],
+      'T': [0, 0, 0, 1, 1, 1, 1, 0],
       'U': [0, 1, 1, 1, 1, 1, 0, 0],
+      'Y': [0, 1, 1, 1, 0, 1, 1, 0],
     };
 
-    // 2. Parse setNumber, setNumberF, setChars, blank
-    let displayText = '';
+    // 3. Evaluate display output value
+    let displayText: string | null = null;
     let decPlaces: number | null = null;
-    let isBlank = false;
 
-    if (/sevseg\.blank\s*\(\s*\)/.test(this.code)) {
-      isBlank = true;
-    }
-
-    const setNumMatch = /sevseg\.setNumber(?:F)?\s*\(\s*([^,)]+)(?:,\s*([^)]+))?\)/i.exec(this.code);
-    const setCharsMatch = /sevseg\.setChars\s*\(\s*"([^"]+)"\s*\)/i.exec(this.code);
-
-    if (setCharsMatch) {
-      displayText = setCharsMatch[1];
-    } else if (setNumMatch) {
-      const rawExpr = setNumMatch[1].trim();
-      const rawDec = setNumMatch[2]?.trim();
-      if (rawDec) {
-        const d = this.varMap.get(rawDec) ?? parseInt(rawDec, 10);
-        if (!isNaN(d)) decPlaces = d;
-      }
-
-      // Check if expression or counting variable
-      let val: number | null = null;
-      if (this.varMap.has(rawExpr)) {
-        val = this.varMap.get(rawExpr)!;
-      } else {
-        const parsed = parseFloat(rawExpr);
-        if (!isNaN(parsed)) {
-          val = parsed;
-        } else {
-          val = this.evalMathExpr(rawExpr);
-        }
-      }
-
-      // If variable increments inside loop (e.g. count++ / i++) or millis() / 1000
-      const hasIncrement = new RegExp(`(?:${rawExpr}\\s*\\+\\+|\\+\\+\\s*${rawExpr}|${rawExpr}\\s*\\+=)`).test(this.code);
-      if (hasIncrement) {
-        const delayMatch = /delay\s*\(\s*(\d+)\s*\)/.exec(this.code);
-        const delayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
-        const currentCount = Math.floor(elapsed / Math.max(100, delayMs));
-        const maxLimit = numDigits === 1 ? 10 : 10000;
-        val = currentCount % maxLimit;
-      } else if (val === null && /millis\s*\(\s*\)/.test(rawExpr)) {
-        val = Math.floor(elapsed / 1000);
-      } else if (val === null) {
-        // Fallback default: show elapsed seconds or tick count
-        val = numDigits === 1 ? Math.floor(elapsed / 1000) % 10 : Math.floor(elapsed / 1000) % 10000;
-      }
-
-      if (decPlaces !== null && decPlaces >= 0) {
-        displayText = val.toFixed(decPlaces);
-      } else {
-        displayText = String(Math.round(val));
-      }
-    } else {
-      // Default live counter if sevseg is present
-      const currentCount = Math.floor(elapsed / 1000);
-      displayText = numDigits === 1 ? String(currentCount % 10) : String(currentCount % 10000);
-    }
-
-    if (isBlank) {
+    // Check blank()
+    if (/\.blank\s*\(\s*\)/i.test(this.code)) {
       displayText = '';
     }
 
-    // Pad / format displayText to fit digits
+    // Check setChars("...")
+    const setCharsMatch = /\.setChars\s*\(\s*"([^"]+)"\s*\)/i.exec(this.code);
+    if (setCharsMatch) {
+      displayText = setCharsMatch[1];
+    }
+
+    // Check setNumber(...) / setNumberF(...)
+    if (displayText === null) {
+      // Find all setNumber calls
+      const setNumRe = /(?:[A-Za-z0-9_]+)\.setNumber(?:F)?\s*\(\s*([^,)]+)(?:,\s*([^)]+))?\)/gi;
+      const allCalls: { expr: string; dec: string | null }[] = [];
+      let sn: RegExpExecArray | null;
+      while ((sn = setNumRe.exec(this.code)) !== null) {
+        allCalls.push({ expr: sn[1].trim(), dec: sn[2]?.trim() || null });
+      }
+
+      if (allCalls.length === 1) {
+        const { expr: rawExpr, dec: rawDec } = allCalls[0];
+
+        if (rawDec) {
+          const d = this.varMap.get(rawDec) ?? parseInt(rawDec, 10);
+          if (!isNaN(d)) decPlaces = d;
+        }
+
+        // Check if rawExpr is a fixed numeric literal (e.g. display.setNumber(1);)
+        const isNumericLiteral = /^-?\d+(?:\.\d+)?$/.test(rawExpr);
+
+        if (isNumericLiteral) {
+          // Strictly fixed number constant — NEVER increment or auto-count
+          const fixedNum = parseFloat(rawExpr);
+          displayText = decPlaces !== null && decPlaces >= 0
+            ? fixedNum.toFixed(decPlaces)
+            : String(fixedNum);
+        } else {
+          // It's a variable or expression: e.g. display.setNumber(count);
+          // Check if variable is incremented inside loop/code (e.g. count++ / i++ / count += 1)
+          const hasIncrement = new RegExp(`(?:${rawExpr}\\s*\\+\\+|\\+\\+\\s*${rawExpr}|${rawExpr}\\s*\\+=|${rawExpr}\\s*=\\s*${rawExpr}\\s*\\+)`).test(this.code);
+
+          // Check if inside a for loop: e.g. for (int i = 0; i < 10; i++)
+          const forMatch = new RegExp(`for\\s*\\([^;]*${rawExpr}\\s*=\\s*(\\d+)[^;]*${rawExpr}\\s*<\\s*(\\d+)[^)]*\\)`).exec(this.code);
+
+          if (forMatch) {
+            const startVal = parseInt(forMatch[1], 10) || 0;
+            const endVal = parseInt(forMatch[2], 10) || 10;
+            const delayMatch = /delay\s*\(\s*(\d+)\s*\)/.exec(this.code);
+            const stepDelayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
+            const range = Math.max(1, endVal - startVal);
+            const currentStep = Math.floor(elapsed / Math.max(50, stepDelayMs)) % range;
+            const computed = startVal + currentStep;
+            displayText = String(computed);
+          } else if (hasIncrement) {
+            const delayMatch = /delay\s*\(\s*(\d+)\s*\)/.exec(this.code);
+            const stepDelayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
+            const initialVal = this.varMap.get(rawExpr) ?? 0;
+            const maxLimit = numDigits === 1 ? 10 : 10000;
+            const currentCount = (initialVal + Math.floor(elapsed / Math.max(50, stepDelayMs))) % maxLimit;
+            displayText = String(currentCount);
+          } else if (/millis\s*\(\s*\)/.test(rawExpr)) {
+            const val = Math.floor(elapsed / 1000);
+            displayText = String(numDigits === 1 ? val % 10 : val % 10000);
+          } else if (this.varMap.has(rawExpr)) {
+            const val = this.varMap.get(rawExpr)!;
+            displayText = decPlaces !== null && decPlaces >= 0 ? val.toFixed(decPlaces) : String(Math.round(val));
+          } else {
+            const evaluated = this.evalMathExpr(rawExpr);
+            if (evaluated !== null) {
+              displayText = decPlaces !== null && decPlaces >= 0 ? evaluated.toFixed(decPlaces) : String(Math.round(evaluated));
+            } else {
+              displayText = rawExpr;
+            }
+          }
+        }
+      } else if (allCalls.length > 1) {
+        // Multiple sequential setNumber calls: step through them
+        const delayMatch = /delay\s*\(\s*(\d+)\s*\)/.exec(this.code);
+        const stepDelayMs = delayMatch ? parseInt(delayMatch[1], 10) : 1000;
+        const activeIdx = Math.floor(elapsed / Math.max(50, stepDelayMs)) % allCalls.length;
+        const activeCall = allCalls[activeIdx];
+        const val = this.varMap.get(activeCall.expr) ?? parseFloat(activeCall.expr);
+        displayText = isNaN(val) ? activeCall.expr : String(val);
+      }
+    }
+
+    // If no display commands were called at all, keep display unlit / empty (do NOT fake count!)
+    if (displayText === null) {
+      displayText = '';
+    }
+
+    // Format characters across digits
     const cleanChars = displayText.replace(/\./g, '').slice(-numDigits).padStart(numDigits, ' ');
     const allSegments: number[] = [];
 
@@ -1997,7 +2095,7 @@ export class JsInterpreter {
       const ch = (cleanChars[d] || ' ').toUpperCase();
       const pattern = DIGIT_PATTERNS[ch] ? [...DIGIT_PATTERNS[ch]] : [0, 0, 0, 0, 0, 0, 0, 0];
 
-      // Check decimal point for this digit
+      // Set decimal point if needed
       if (decPlaces !== null && d === numDigits - 1 - decPlaces) {
         pattern[7] = 1;
       }
@@ -2005,28 +2103,27 @@ export class JsInterpreter {
       allSegments.push(...pattern);
     }
 
-    // 3. Drive the physical / simulated digital output pins
-    // Single-digit or first digit segment writes:
+    // 4. Drive output pins:
+    // Segments A, B, C, D, E, F, G, DP
     const activeSegs = allSegments.slice(0, 8);
     for (let i = 0; i < segmentPins.length && i < 8; i++) {
       const pin = segmentPins[i];
       const isLit = Boolean(activeSegs[i]);
-      // Common Cathode: Pin HIGH = Lit, Pin LOW = Unlit
-      // Common Anode: Pin LOW = Lit, Pin HIGH = Unlit
+      // Common Cathode: HIGH = Lit, LOW = Unlit
+      // Common Anode: LOW = Lit, HIGH = Unlit
       const pinState = isCommonAnode ? !isLit : isLit;
       this.hooks.onDigitalWrite(pin, pinState);
     }
 
-    // Multiplexed digit select pins
+    // Digit select pins (for 4-digit multiplexing)
     for (let d = 0; d < digitPins.length && d < numDigits; d++) {
       const digPin = digitPins[d];
-      // For single digit or active digit enable:
       const isDigActive = true;
       const digState = isCommonAnode ? isDigActive : !isDigActive;
       this.hooks.onDigitalWrite(digPin, digState);
     }
 
-    // 4. Notify high-level callback for instant visual refresh
+    // 5. Update high-level state
     this.hooks.onSevenSegmentUpdate?.(allSegments, numDigits, displayText);
   }
 
